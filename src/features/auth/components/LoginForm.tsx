@@ -1,0 +1,231 @@
+// Login Form Component
+
+import React, { useState, useCallback, useMemo } from 'react';
+import styled from 'styled-components';
+import { useLogin } from '../../../stores/auth';
+import { logger } from '../../../utils/logger';
+
+interface LoginFormProps {
+  onSuccess?: () => void;
+  className?: string;
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, className }) => {
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  // Zustand 스토어에서 필요한 값들만 선택적으로 구독
+  const loginData = useLogin();
+  const { isLoading, error, isServiceReady, loginWithGoogle, clearError } = loginData;
+
+  // 핸들러를 useCallback으로 메모이제이션하여 불필요한 re-render 방지
+  const handleGoogleLogin = useCallback(async () => {
+    // 서비스가 준비되지 않았거나 이미 로딩 중이면 조기 반환
+    if (!isServiceReady || isLoading || isGoogleLoading) {
+      logger.warn('Google login attempted before service ready or during loading');
+      return;
+    }
+
+    try {
+      setIsGoogleLoading(true);
+      clearError();
+
+      // Google OAuth 플로우 시작
+      logger.userAction('Google login initiated');
+
+      // 개발 환경에서는 실제 Google OAuth 리다이렉트
+      const googleOAuthUrl = `${__API_BASE_URL__}/api/v1/auth/google/login?redirect_uri=${encodeURIComponent(__OAUTH_REDIRECT_URI__)}`;
+
+      logger.info('Redirecting to Google OAuth', { url: googleOAuthUrl });
+      window.location.href = googleOAuthUrl;
+
+      // 리다이렉트 후에는 이 코드가 실행되지 않음
+    } catch (error) {
+      logger.error('Google login failed', error);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  }, [isServiceReady, isLoading, isGoogleLoading, clearError, loginWithGoogle, onSuccess]);
+
+  // 버튼 상태를 useMemo로 계산하여 불필요한 계산 방지
+  const buttonState = useMemo(() => {
+    const isDisabled = !isServiceReady || isLoading || isGoogleLoading;
+
+    let content;
+    if (!isServiceReady) {
+      content = (
+        <>
+          <LoadingSpinner />
+          서비스 준비 중...
+        </>
+      );
+    } else if (isLoading || isGoogleLoading) {
+      content = (
+        <>
+          <LoadingSpinner />
+          로그인 중...
+        </>
+      );
+    } else {
+      content = (
+        <>
+          <GoogleIcon>G</GoogleIcon>
+          Google로 로그인
+        </>
+      );
+    }
+
+    return { isDisabled, content };
+  }, [isServiceReady, isLoading, isGoogleLoading]);
+
+  return (
+    <Container className={className}>
+      <Title>Open Spot에 로그인</Title>
+      <Description>
+        위치 기반 서비스를 이용하려면 로그인이 필요합니다.
+      </Description>
+
+      {error && (
+        <ErrorMessage>
+          {error}
+          <CloseButton onClick={clearError}>&times;</CloseButton>
+        </ErrorMessage>
+      )}
+
+      <GoogleButton
+        onClick={handleGoogleLogin}
+        disabled={buttonState.isDisabled}
+      >
+        {buttonState.content}
+      </GoogleButton>
+
+      <FooterText>
+        로그인하면 서비스 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.
+      </FooterText>
+    </Container>
+  );
+};
+
+const Container = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  max-width: 400px;
+  margin: 0 auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+`;
+
+const Title = styled.h1`
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 0.5rem;
+  text-align: center;
+`;
+
+const Description = styled.p`
+  font-size: 0.875rem;
+  color: #718096;
+  text-align: center;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+`;
+
+const ErrorMessage = styled.div`
+  position: relative;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: #fed7d7;
+  color: #c53030;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  border: 1px solid #feb2b2;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 0.5rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: #c53030;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background-color: rgba(197, 48, 48, 0.1);
+    border-radius: 4px;
+  }
+`;
+
+const GoogleButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background-color: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1.5rem;
+
+  &:hover:not(:disabled) {
+    border-color: #cbd5e0;
+    background-color: #f7fafc;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const GoogleIcon = styled.span`
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: 0.75rem;
+  background: linear-gradient(45deg, #ea4335, #fbbc05, #34a853, #4285f4);
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+`;
+
+const LoadingSpinner = styled.div`
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid #e2e8f0;
+  border-top: 2px solid #3182ce;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`;
+
+const FooterText = styled.p`
+  font-size: 0.75rem;
+  color: #a0aec0;
+  text-align: center;
+  line-height: 1.4;
+  max-width: 300px;
+`;

@@ -4,193 +4,172 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a React TypeScript frontend application built with Vite that displays location data on a Naver Map. The application fetches GPS coordinates from a backend API and displays them as interactive markers on the map.
+React TypeScript frontend application with feature-based architecture, displaying location data on Naver Maps. Implements Google OAuth authentication, dependency injection, and Zustand state management.
 
 ## Key Technologies
 
 - **Frontend Framework**: React 18 with TypeScript
 - **Build Tool**: Vite
-- **Styling**: Styled-components
+- **State Management**: Zustand with persistence and devtools
+- **Architecture**: Feature-based with dependency injection container
+- **Authentication**: Google OAuth with JWT tokens
 - **Map Integration**: Naver Maps API
-- **HTTP Client**: Axios
-- **State Management**: React Hooks (useState, useEffect)
+- **HTTP Client**: Axios with secure interceptors
+- **Routing**: React Router DOM v7
 
 ## Development Commands
 
-### Installation and Setup
 ```bash
-# Install dependencies
-npm install
+# Install dependencies (uses yarn)
+yarn install
 
 # Start development server
-npm run dev
+yarn dev
 
 # Build for production
-npm run build
-
-# Preview production build
-npm run preview
+yarn build
 
 # Type checking
-npm run type-check
+yarn type-check
 
 # Linting
-npm run lint
+yarn lint
+
+# Kill development servers
+yarn kill:servers
+
+# Restart development server
+yarn restart
 ```
 
-### Environment Setup
-1. Copy `.env.example` to `.env`
-2. Set your Naver Map API client ID:
-   ```
-   NAVER_MAP_CLIENT_ID=your_naver_map_client_id_here
-   API_BASE_URL=http://localhost:8000/
-   ```
+## Environment Setup
 
-## Project Architecture
+Copy `.env.example` to `.env` and configure:
+```bash
+NAVER_MAP_CLIENT_ID=your_ncp_key_id_here
+API_BASE_URL=http://localhost:8080
+GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+OAUTH_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
+```
 
-### Core Structure
+## Architecture Overview
+
+### Feature-Based Structure
+
 ```
 src/
-├── components/          # Reusable UI components
-│   ├── Map/            # Map-related components
-│   │   ├── MapContainer.tsx    # Main map wrapper
-│   │   └── LocationMarker.tsx  # Individual location markers
-│   └── UI/             # General UI components
-├── pages/              # Page components
-│   └── MainPage.tsx    # Main application page
-├── services/           # API communication layer
-│   ├── api.ts          # Base API client with interceptors
-│   └── locationService.ts # Location-specific API calls
-├── hooks/              # Custom React hooks
-│   ├── useLocations.ts # Location data management
-│   └── useNaverMap.ts  # Naver Map instance management
-├── types/              # TypeScript type definitions
-│   ├── naver-maps.d.ts # Naver Maps API types
-│   └── api.ts          # API response types
-├── constants/          # Application constants
-│   ├── map.ts          # Map configuration and markers
-│   └── api.ts          # API endpoints and config
-└── utils/              # Utility functions
-    └── loadNaverMaps.ts # Dynamic Naver Maps API loading
+├── features/           # Feature modules (auth, map)
+│   ├── auth/          # Authentication feature
+│   │   ├── components/ # Login, ProtectedRoute
+│   │   ├── pages/     # LoginPage, AuthCallbackPage
+│   │   └── services/  # Auth-specific services
+│   └── map/           # Map feature
+│       ├── components/ # Map components
+│       └── pages/     # MapPage
+├── core/              # Core architecture
+│   ├── container/     # Dependency injection
+│   ├── interfaces/    # Service contracts
+│   └── types/         # Core type definitions
+├── stores/            # Zustand stores
+│   ├── auth/          # Authentication state
+│   └── location/      # Location data state
+├── services/          # External API services
+├── shared/            # Shared components and utilities
+├── setup/             # Application initialization
+└── utils/             # Utility functions
 ```
 
-### Key Components
+### Dependency Injection Container
 
-**MapContainer**: Main map component that:
-- Initializes Naver Map using custom hook
-- Loads location data from backend API
-- Renders location markers dynamically
-- Handles map events (bounds change, marker clicks)
-- Provides responsive design for mobile devices
+The application uses a custom DI container (`src/core/container/Container.ts`):
+- Services registered with tokens in `ServiceTokens.ts`
+- Supports singleton and factory patterns
+- Services injected into stores via `setAuthServiceForStore()`
+- Container initialized in `src/setup/initializeApplication.ts`
 
-**LocationMarker**: Individual marker component that:
-- Creates Naver Map markers for each location
-- Handles marker click events and info windows
-- Supports custom icons based on location category
-- Manages marker lifecycle (creation/destruction)
+### State Management with Zustand
 
-**useNaverMap**: Custom hook for map management:
-- Dynamically loads Naver Maps API with environment variables
-- Initializes map instance with configuration
-- Provides map control methods (setCenter, setZoom, getBounds)
-- Handles map lifecycle and cleanup
+**Auth Store** (`src/stores/auth/authStore.ts`):
+- Persisted authentication state
+- Google OAuth integration
+- JWT token handling
+- Service injection pattern for async operations
+- Prevents infinite loops with state equality checks
 
-**useLocations**: Custom hook for location data:
-- Fetches locations from backend API
-- Manages loading states and error handling
-- Supports filtering by map bounds and category
-- Provides refresh and update methods
+**Location Store** (`src/stores/location/locationStore.ts`):
+- Location data management
+- Map bounds and filtering
+- CRUD operations for locations
 
-### API Integration
+### Authentication Flow
 
-The application expects a backend API with the following endpoints:
+1. **Login**: Google OAuth redirect → Backend exchange → JWT tokens
+2. **Token Storage**: Secure cookie handling via `SecureCookieService`
+3. **API Calls**: JWT attached via `SecureApiClient` interceptors
+4. **Protected Routes**: `ProtectedRoute` component guards authenticated pages
+5. **Token Refresh**: Automatic refresh before expiration
 
+### Application Lifecycle
+
+Entry point: `src/main.tsx` → `NewApp.tsx`
+
+1. **Initialization**: `initializeApplication()` sets up DI container and services
+2. **Service Registration**: Auth and API services registered with container
+3. **Store Injection**: Services injected into Zustand stores
+4. **Route Protection**: Authentication checked for protected routes
+
+## Key Service Patterns
+
+### Secure API Client
+- JWT token attachment
+- Request/response interceptors
+- Error handling and token refresh
+- CORS configuration for backend integration
+
+### Auth Service Architecture
+- Google OAuth integration
+- JWT token lifecycle management
+- User profile management
+- Logout and cleanup
+
+## Development Patterns
+
+### Adding New Features
+1. Create feature directory under `src/features/`
+2. Implement service interfaces from `src/core/interfaces/`
+3. Register services in DI container
+4. Create Zustand store if needed
+5. Add routes to `NewApp.tsx`
+
+### Service Registration
 ```typescript
-GET /api/locations - Fetch all locations
-GET /api/locations/:id - Fetch specific location
-POST /api/locations - Create new location
-PUT /api/locations/:id - Update location
-DELETE /api/locations/:id - Delete location
+// In setup/initializeApplication.ts
+container.register(ServiceTokens.AUTH_SERVICE, () => new AuthService(...));
 ```
 
-Location data structure:
+### Store Integration
 ```typescript
-interface LocationResponse {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  description?: string;
-  category?: string;
-  iconUrl?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// In store files
+setAuthServiceForStore(container.resolve(ServiceTokens.AUTH_SERVICE));
 ```
 
-### Development Patterns
+## Backend Integration
 
-**Component Organization**: Components follow a clear separation of concerns:
-- Presentational components for UI rendering
-- Container components for data fetching and state management
-- Custom hooks for reusable logic
+- **API Base URL**: `http://localhost:8080` (Spring Boot Gateway)
+- **Auth Endpoints**: `/api/v1/auth/*`
+- **Location Endpoints**: `/api/v1/locations/*`
+- **OAuth Callback**: `/login/oauth2/code/google`
 
-**Type Safety**: Comprehensive TypeScript typing:
-- API response interfaces
-- Naver Maps API type definitions
-- Component prop interfaces
-- Custom hook return types
+## Error Handling
 
-**Error Handling**: Robust error management:
-- API service layer with interceptors
-- Loading states and error boundaries
-- User-friendly error messages
-- Graceful degradation when map fails to load
+- Global `ErrorBoundary` component
+- Service-level error handling with logging
+- Store error states with user-friendly messages
+- Graceful degradation for service failures
 
-**Performance Optimization**:
-- Dynamic loading of Naver Maps API
-- Efficient re-rendering with React.memo and useCallback
-- Responsive design with CSS media queries
-- Marker clustering for large datasets (ready for implementation)
+## Performance Considerations
 
-### Map Features
-
-**Default Configuration**:
-- Center: Seoul City Hall (37.5665, 126.9780)
-- Default zoom level: 13
-- Enabled controls: scale, logo, map type, zoom
-
-**Marker Categories**:
-- Default, Restaurant, Cafe, Shopping, Park
-- Custom icons supported per category
-- Info windows with location details
-
-**Responsive Design**:
-- Mobile-optimized layout
-- Touch-friendly controls
-- Adaptive info panel positioning
-
-## Testing the Application
-
-1. Ensure backend API is running on configured port
-2. Set up environment variables with valid Naver Map API key
-3. Start development server: `npm run dev`
-4. Navigate to `http://localhost:3000`
-5. Verify map loads and displays location markers from API
-
-## Common Development Tasks
-
-### Adding New Location Categories
-1. Update `MAP_CATEGORIES` in `src/constants/map.ts`
-2. Add corresponding icon in `MARKER_ICONS`
-3. Update category filter in `MainPage.tsx`
-
-### Customizing Map Appearance
-1. Modify map options in `useNaverMap` hook
-2. Update map controls and styling in `MapContainer`
-3. Adjust responsive breakpoints in styled-components
-
-### API Integration Changes
-1. Update type definitions in `src/types/api.ts`
-2. Modify service methods in `src/services/locationService.ts`
-3. Update component state management accordingly
+- Dynamic Naver Maps API loading
+- Zustand state persistence with selective serialization
+- Service singleton patterns in DI container
+- Infinite loop prevention in store updates
