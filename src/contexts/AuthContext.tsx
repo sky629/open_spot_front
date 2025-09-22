@@ -13,7 +13,6 @@ interface AuthContextType {
 
   // 액션
   loginWithGoogle: (accessToken: string) => Promise<void>;
-  loginWithGoogleCode: (authorizationCode: string) => Promise<void>;
   setUserFromToken: (token: string) => Promise<void>;
   setUser: (user: User) => void;
   logout: () => Promise<void>;
@@ -100,21 +99,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  // Google OAuth 로그인 (Authorization Code 사용)
-  const loginWithGoogleCode = async (authorizationCode: string): Promise<void> => {
-    try {
-      logger.userAction('Google login with authorization code');
-
-      const loginResponse = await authService.loginWithGoogleCode(authorizationCode);
-      setUser(loginResponse.user);
-
-      logger.userAction('Google login with code completed successfully', { userId: loginResponse.user.id });
-    } catch (error) {
-      logger.error('Google login with code failed', error);
-      throw error;
-    }
-  };
-
   // JWT 토큰으로부터 사용자 설정 (백엔드 OAuth 성공 후)
   const setUserFromToken = async (token: string): Promise<void> => {
     try {
@@ -195,7 +179,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isAuthenticated,
     isLoading,
     loginWithGoogle,
-    loginWithGoogleCode,
     setUserFromToken,
     setUser: setUserData,
     logout,

@@ -18,7 +18,6 @@ export interface AuthState {
 
   // 비동기 액션
   loginWithGoogle: (accessToken: string) => Promise<void>;
-  loginWithGoogleCode: (authorizationCode: string) => Promise<void>;
   setUserFromToken: (token: string) => Promise<void>;
   getUserProfile: () => Promise<void>;
   logout: () => Promise<void>;
@@ -39,7 +38,6 @@ export interface AuthActions {
 
 export interface AuthAsyncActions {
   loginWithGoogle: (accessToken: string) => Promise<void>;
-  loginWithGoogleCode: (authorizationCode: string) => Promise<void>;
   setUserFromToken: (token: string) => Promise<void>;
   getUserProfile: () => Promise<void>;
   logout: () => Promise<void>;

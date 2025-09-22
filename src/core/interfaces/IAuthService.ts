@@ -10,13 +10,6 @@ export interface IAuthService {
   loginWithGoogle(accessToken: string): Promise<GoogleLoginResponse>;
 
   /**
-   * Google OAuth 로그인 (Authorization Code 사용)
-   * @param authorizationCode - Google 인증 코드
-   * @returns 로그인 응답
-   */
-  loginWithGoogleCode(authorizationCode: string): Promise<GoogleLoginResponse>;
-
-  /**
    * JWT 토큰으로부터 사용자 설정
    * @param token - JWT 토큰
    * @returns 로그인 응답

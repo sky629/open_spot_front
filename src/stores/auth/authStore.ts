@@ -175,41 +175,6 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
-        loginWithGoogleCode: async (authorizationCode: string) => {
-          const { isServiceReady } = get();
-
-          if (!isServiceReady || !authService) {
-            const errorMessage = 'Authentication service is not ready. Please wait...';
-            set((state) => ({ ...state, error: errorMessage }));
-            throw new Error(errorMessage);
-          }
-
-          try {
-            set((state) => ({ ...state, isLoading: true, error: null }));
-
-            logger.userAction('Starting Google login with authorization code');
-
-            const loginResponse = await authService.loginWithGoogleCode(authorizationCode);
-
-            set((state) => ({
-              ...state,
-              user: loginResponse.user,
-              isAuthenticated: !!loginResponse.user,
-              isLoading: false,
-              error: null
-            }));
-
-            logger.userAction('Google login with code completed successfully', {
-              userId: loginResponse.user.id
-            });
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Google login with code failed';
-            set((state) => ({ ...state, error: errorMessage, isLoading: false }));
-            logger.error('Google login with code failed in store', error);
-            throw error;
-          }
-        },
-
         setUserFromToken: async (token: string) => {
           const { isServiceReady, isLoading, user } = get();
 

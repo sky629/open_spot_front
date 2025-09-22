@@ -1,10 +1,11 @@
 // Map Page Component with New Layout
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, CategoryFilter } from '../components';
 import { UserProfile } from '../../auth/components';
+import { useUser } from '../../../stores/auth'; 
 import { useSelectedLocation } from '../../../stores/location';
 import { logger } from '../../../utils/logger';
 import { colors, media, transitions, shadows } from '../../../styles';
@@ -13,9 +14,19 @@ export const MapPage: React.FC = () => {
   console.log('🚀 MapPage component rendering...');
 
   const navigate = useNavigate();
+  const user = useUser(); 
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const selectedLocation = useSelectedLocation();
+
+  useEffect(() => {
+    // 만약 사용자 정보가 없다면 (로그인되지 않은 상태라면)
+    if (!user) {
+      logger.info('User not authenticated, redirecting to login page.');
+      // /login 페이지로 리디렉션시킵니다.
+      navigate('/login');
+    }
+  }, [user, navigate]); 
 
   console.log('🚀 MapPage - selectedLocation:', selectedLocation);
 

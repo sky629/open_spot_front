@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary, LoadingSpinner } from './shared/components';
 import { LoginPage, ProtectedRoute } from './features/auth';
-import { NewAuthCallbackPage } from './features/auth/pages/NewAuthCallbackPage';
 import { MapPage } from './features/map';
 import { initializeApplication, cleanupApplication } from './setup';
 import { logger } from './utils/logger';
@@ -147,7 +146,7 @@ export const NewApp: React.FC = () => {
           <Routes>
             {/* 공개 경로들 */}
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/auth/login/success" element={<NewAuthCallbackPage />} />
+
 
             {/* 보호된 경로들 */}
             <Route

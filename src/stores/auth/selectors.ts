@@ -53,7 +53,6 @@ export const useUserProfile = () => {
 export const useAuthActions = () =>
   useAuthStore((state) => ({
     loginWithGoogle: state.loginWithGoogle,
-    loginWithGoogleCode: state.loginWithGoogleCode,
     setUserFromToken: state.setUserFromToken,
     getUserProfile: state.getUserProfile,
     logout: state.logout,
@@ -74,7 +73,6 @@ export const useLogin = () => {
   const error = useAuthStore((state) => state.error);
   const isServiceReady = useAuthStore((state) => state.isServiceReady);
   const loginWithGoogle = useAuthStore((state) => state.loginWithGoogle);
-  const loginWithGoogleCode = useAuthStore((state) => state.loginWithGoogleCode);
   const clearError = useAuthStore((state) => state.clearError);
 
   return React.useMemo(() => ({
@@ -82,9 +80,8 @@ export const useLogin = () => {
     error,
     isServiceReady,
     loginWithGoogle,
-    loginWithGoogleCode,
     clearError,
-  }), [isLoading, error, isServiceReady, loginWithGoogle, loginWithGoogleCode, clearError]);
+  }), [isLoading, error, isServiceReady, loginWithGoogle, clearError]);
 };
 
 /**

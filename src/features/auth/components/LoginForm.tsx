@@ -32,10 +32,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, className }) =>
       // Google OAuth 플로우 시작
       logger.userAction('Google login initiated');
 
-      // 개발 환경에서는 실제 Google OAuth 리다이렉트
-      const googleOAuthUrl = `${__API_BASE_URL__}/api/v1/auth/google/login?redirect_uri=${encodeURIComponent(__OAUTH_REDIRECT_URI__)}`;
+      // Google OAuth 리다이렉트 (/login으로 통합됨)
+      const redirectUri = `${window.location.origin}/login`;
+      const googleOAuthUrl = `${__API_BASE_URL__}/api/v1/auth/google/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-      logger.info('Redirecting to Google OAuth', { url: googleOAuthUrl });
+      logger.info('Redirecting to Google OAuth', { url: googleOAuthUrl, redirectUri });
       window.location.href = googleOAuthUrl;
 
       // 리다이렉트 후에는 이 코드가 실행되지 않음

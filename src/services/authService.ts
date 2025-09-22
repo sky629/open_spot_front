@@ -127,35 +127,6 @@ export class AuthService {
     }
   }
 
-  // Google OAuth 로그인 (Authorization Code를 백엔드로 전송)
-  async loginWithGoogleCode(authorizationCode: string): Promise<GoogleLoginResponse> {
-    try {
-      logger.userAction('Google login with authorization code');
-
-      const response = await api.post<ApiResponse<GoogleLoginResponse>>(
-        API_ENDPOINTS.AUTH.GOOGLE_LOGIN_CODE,
-        { code: authorizationCode }
-      );
-
-      if (response.success && response.data) {
-        const loginResponse = response.data.data;
-        const { user, tokens } = loginResponse;
-
-        // 토큰과 사용자 정보 저장
-        this.setTokens(tokens);
-        this.setUser(user);
-
-        logger.userAction('Google login with code success', { userId: user.id });
-        return loginResponse;
-      } else {
-        throw new Error(response.message || 'Google login with code failed');
-      }
-    } catch (error) {
-      logger.error('Google login with code failed', error);
-      throw error;
-    }
-  }
-
   // JWT 토큰으로부터 사용자 설정 (백엔드에서 OAuth 처리 후 리다이렉트 시 사용)
   async setUserFromToken(token: string): Promise<GoogleLoginResponse> {
     try {

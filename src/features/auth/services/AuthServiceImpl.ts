@@ -100,12 +100,6 @@ export class AuthServiceImpl extends SecureAuthService implements IAuthServiceFu
     return result;
   }
 
-  async loginWithGoogleCode(authorizationCode: string) {
-    const result = await super.loginWithGoogleCode(authorizationCode);
-    this.notifyAuthStateChange();
-    return result;
-  }
-
   async logout() {
     await super.logout();
     this.notifyAuthStateChange();
