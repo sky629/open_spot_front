@@ -22,7 +22,12 @@ export const SERVICE_TOKENS = {
   // 로거 관련
   LOGGER: Symbol('Logger'),
 
-  // 네이버 맵 관련
+  // 맵 관련
+  MAP_SERVICE_FACTORY: Symbol('MapServiceFactory'),
+  MAP_SERVICE: Symbol('MapService'),
+  MAP_LOADER: Symbol('MapLoader'),
+
+  // 네이버 맵 관련 (레거시)
   NAVER_MAP_SERVICE: Symbol('NaverMapService')
 } as const;
 

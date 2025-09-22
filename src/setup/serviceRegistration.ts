@@ -5,6 +5,7 @@ import { SecureApiClient } from '../services/SecureApiClient';
 import { SecureCookieService } from '../services/SecureCookieService';
 import { AuthServiceImpl } from '../features/auth/services';
 import { LocationService } from '../services';
+import { MapServiceFactory } from '../services/map';
 import { API_CONFIG } from '../constants';
 import { setupStores } from '../stores/setup';
 import { logger } from '../utils/logger';
@@ -70,7 +71,14 @@ export const registerServices = (): void => {
       true // 싱글톤
     );
 
-    // 5. 로거 등록 (기존 logger 인스턴스 재사용)
+    // 5. 맵 서비스 팩토리 등록
+    container.register(
+      SERVICE_TOKENS.MAP_SERVICE_FACTORY,
+      () => MapServiceFactory.getInstance(),
+      true // 싱글톤
+    );
+
+    // 6. 로거 등록 (기존 logger 인스턴스 재사용)
     container.register(
       SERVICE_TOKENS.LOGGER,
       () => logger,
@@ -195,3 +203,4 @@ export const getAuthService = () => container.resolve(SERVICE_TOKENS.AUTH_SERVIC
 export const getApiClient = () => container.resolve(SERVICE_TOKENS.API_CLIENT);
 export const getLocationService = () => container.resolve(SERVICE_TOKENS.LOCATION_SERVICE);
 export const getCookieService = () => container.resolve(SERVICE_TOKENS.COOKIE_SERVICE);
+export const getMapServiceFactory = () => container.resolve(SERVICE_TOKENS.MAP_SERVICE_FACTORY);
