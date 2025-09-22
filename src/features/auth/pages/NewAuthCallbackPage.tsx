@@ -39,7 +39,7 @@ export const NewAuthCallbackPage: React.FC = () => {
       isProcessedRef.current = true; // 처리 시작 표시
 
       // 스토어에서 직접 함수를 가져와서 호출하여 의존성 문제 해결
-      const { setLoading, setError, setUser, setUserFromToken } = useAuthStore.getState();
+      const { setLoading, setError, setUser } = useAuthStore.getState();
 
       setLoading(true);
       setError(null);
@@ -89,8 +89,18 @@ export const NewAuthCallbackPage: React.FC = () => {
             throw new Error('Invalid JWT token format');
           }
 
-          // JWT payload 디코딩
-          const payload = JSON.parse(atob(tokenParts[1]));
+          // JWT payload 디코딩 (UTF-8 지원)
+          const decodeBase64UTF8 = (str: string) => {
+            try {
+              // 최신 브라우저 지원 방식
+              return new TextDecoder().decode(Uint8Array.from(atob(str), c => c.charCodeAt(0)));
+            } catch {
+              // 레거시 브라우저 지원 방식
+              return decodeURIComponent(escape(atob(str)));
+            }
+          };
+
+          const payload = JSON.parse(decodeBase64UTF8(tokenParts[1]));
           console.log('🔍 JWT Payload:', payload);
 
           // 토큰에서 사용자 정보 추출
@@ -99,7 +109,7 @@ export const NewAuthCallbackPage: React.FC = () => {
             email: payload.email,
             name: payload.name,
             socialId: payload.socialId,
-            provider: 'Google',
+            provider: 'Google' as const,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
           };

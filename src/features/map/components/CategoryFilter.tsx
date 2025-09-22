@@ -3,7 +3,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useLocationFilters, useLocationActions, useLocationCounts } from '../../../stores/location';
-import { MAP_CATEGORIES } from '../../../constants/map';
+import { MAP_CATEGORIES, CATEGORY_ICONS } from '../../../constants/map';
 
 export const CategoryFilter: React.FC = () => {
   const { currentCategory } = useLocationFilters();
@@ -25,126 +25,161 @@ export const CategoryFilter: React.FC = () => {
 
   return (
     <Container>
-      <Title>카테고리 필터</Title>
+      <SectionTitle>카테고리</SectionTitle>
 
-      <FilterList>
+      <CategoryList>
         {/* 전체 보기 */}
-        <FilterItem
+        <CategoryItem
           $isActive={currentCategory === null}
           onClick={() => handleCategoryChange(null)}
         >
-          <CategoryIcon>🗺️</CategoryIcon>
-          <CategoryInfo>
-            <CategoryName>전체</CategoryName>
-            <CategoryCount>{totalCount}</CategoryCount>
-          </CategoryInfo>
-        </FilterItem>
+          <CategoryRow>
+            <CategoryInfo>
+              <CategoryIcon>{CATEGORY_ICONS.all}</CategoryIcon>
+              <CategoryName>전체</CategoryName>
+            </CategoryInfo>
+            <CategoryCount>({totalCount})</CategoryCount>
+          </CategoryRow>
+        </CategoryItem>
 
         {/* 각 카테고리별 필터 */}
         {Object.entries(MAP_CATEGORIES).map(([key, name]) => {
           const count = locationCounts[key] || 0;
 
           return (
-            <FilterItem
+            <CategoryItem
               key={key}
               $isActive={currentCategory === key}
               onClick={() => handleCategoryChange(key)}
               disabled={count === 0}
             >
-              <CategoryIcon>{getCategoryIcon(key)}</CategoryIcon>
-              <CategoryInfo>
-                <CategoryName>{name}</CategoryName>
-                <CategoryCount>{count}</CategoryCount>
-              </CategoryInfo>
-            </FilterItem>
+              <CategoryRow>
+                <CategoryInfo>
+                  <CategoryIcon>{CATEGORY_ICONS[key as keyof typeof CATEGORY_ICONS]}</CategoryIcon>
+                  <CategoryName>{name}</CategoryName>
+                </CategoryInfo>
+                <CategoryCount>({count})</CategoryCount>
+              </CategoryRow>
+            </CategoryItem>
           );
         })}
-      </FilterList>
+      </CategoryList>
+
+      <Divider />
+
+      <SectionTitle>내 장소들</SectionTitle>
+      <EmptyState>
+        <EmptyIcon>📍</EmptyIcon>
+        <EmptyText>아직 기록된 장소가 없습니다.</EmptyText>
+        <EmptySubtext>지도를 클릭해서 장소를 추가해보세요</EmptySubtext>
+      </EmptyState>
     </Container>
   );
 };
 
-// 카테고리별 아이콘 반환
-const getCategoryIcon = (category: string): string => {
-  const icons: Record<string, string> = {
-    restaurant: '🍽️',
-    cafe: '☕',
-    shopping: '🛍️',
-    park: '🌳',
-    entertainment: '🎭',
-    accommodation: '🏨',
-    default: '📍'
-  };
-
-  return icons[category] || icons.default;
-};
-
 const Container = styled.div`
-  background: white;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 `;
 
-const Title = styled.h3`
+const SectionTitle = styled.h3`
   font-size: 1rem;
   font-weight: 600;
   color: #2d3748;
   margin: 0 0 1rem 0;
+  padding: 0 0.25rem;
 `;
 
-const FilterList = styled.div`
+const CategoryList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  margin-bottom: 1.5rem;
 `;
 
-const FilterItem = styled.button<{ $isActive: boolean; disabled?: boolean }>`
+const CategoryItem = styled.button<{ $isActive: boolean; disabled?: boolean }>`
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   background-color: ${props => {
-    if (props.disabled) return '#f7fafc';
-    if (props.$isActive) return '#ebf8ff';
+    if (props.$isActive) return '#f3e8ff';
     return 'transparent';
   }};
-  border: 2px solid ${props => {
-    if (props.$isActive) return '#3182ce';
-    return 'transparent';
-  }};
-  border-radius: 8px;
+  border: none;
+  border-radius: 6px;
   cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   opacity: ${props => props.disabled ? 0.5 : 1};
+  text-align: left;
 
   &:hover:not(:disabled) {
-    background-color: ${props => props.$isActive ? '#ebf8ff' : '#f7fafc'};
+    background-color: ${props => props.$isActive ? '#f3e8ff' : '#f7fafc'};
   }
 `;
 
-const CategoryIcon = styled.span`
-  font-size: 1.25rem;
-  margin-right: 0.75rem;
-  flex-shrink: 0;
+const CategoryRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 `;
 
 const CategoryInfo = styled.div`
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const CategoryIcon = styled.span`
+  font-size: 1rem;
+  flex-shrink: 0;
 `;
 
 const CategoryName = styled.span`
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #2d3748;
-  text-align: left;
+  font-weight: 400;
+  color: #374151;
 `;
 
 const CategoryCount = styled.span`
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 400;
+`;
+
+const Divider = styled.div`
+  height: 1px;
+  background-color: #e5e7eb;
+  margin: 1rem 0;
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1rem;
+  color: #6b7280;
+`;
+
+const EmptyIcon = styled.div`
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.6;
+`;
+
+const EmptyText = styled.p`
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0 0 0.25rem 0;
+  color: #374151;
+`;
+
+const EmptySubtext = styled.p`
   font-size: 0.75rem;
-  color: #718096;
-  margin-top: 0.125rem;
+  margin: 0;
+  color: #9ca3af;
+  line-height: 1.4;
 `;

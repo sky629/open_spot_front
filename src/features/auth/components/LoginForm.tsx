@@ -109,12 +109,54 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 2rem;
-  max-width: 400px;
+  padding: 2.5rem;
+  max-width: 420px;
   margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #8b5cf6, #7c3aed, #6d28d9);
+  }
+
+  animation: slideUp 0.6s ease-out;
+
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 480px) {
+    padding: 2rem 1.5rem;
+    margin: 1rem;
+    max-width: calc(100vw - 2rem);
+    border-radius: 16px;
+  }
+
+  @media (max-width: 320px) {
+    padding: 1.5rem 1rem;
+    margin: 0.5rem;
+  }
 `;
 
 const Title = styled.h1`
@@ -172,40 +214,78 @@ const GoogleButton = styled.button`
   align-items: center;
   justify-content: center;
   width: 100%;
-  padding: 0.75rem 1rem;
-  background-color: white;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 1rem;
   font-weight: 500;
   color: #2d3748;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.1), transparent);
+    transition: left 0.5s;
+  }
 
   &:hover:not(:disabled) {
-    border-color: #cbd5e0;
-    background-color: #f7fafc;
+    border-color: #8b5cf6;
+    background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+    transform: translateY(-2px);
+    box-shadow:
+      0 8px 20px rgba(139, 92, 246, 0.15),
+      0 2px 4px rgba(0, 0, 0, 0.08);
+
+    &::before {
+      left: 100%;
+    }
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
   }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+    transform: none;
   }
 `;
 
 const GoogleIcon = styled.span`
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   margin-right: 0.75rem;
-  background: linear-gradient(45deg, #ea4335, #fbbc05, #34a853, #4285f4);
+  background: linear-gradient(45deg, #ea4335 0%, #fbbc05 25%, #34a853 50%, #4285f4 75%);
   color: white;
-  border-radius: 4px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
-  font-size: 0.875rem;
+  font-weight: 700;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 5px;
+    background: linear-gradient(45deg, #ea4335 0%, #fbbc05 25%, #34a853 50%, #4285f4 75%);
+    opacity: 0.8;
+  }
 `;
 
 const LoadingSpinner = styled.div`

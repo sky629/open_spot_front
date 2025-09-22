@@ -1,7 +1,6 @@
 // Auth Store Selectors
 
 import React from 'react';
-import { shallow } from 'zustand/shallow';
 import { useAuthStore } from './authStore';
 import type { AuthState } from './types';
 
@@ -64,7 +63,7 @@ export const useAuthActions = () =>
     setError: state.setError,
     clearError: state.clearError,
     reset: state.reset,
-  }), shallow);
+  }));
 
 /**
  * 로그인 관련 상태와 액션만 선택하는 셀렉터
@@ -97,7 +96,7 @@ export const useAuthStatus = () =>
     user: state.user,
     isLoading: state.isLoading,
     error: state.error,
-  }), shallow);
+  }));
 
 /**
  * 커스텀 셀렉터 생성 유틸리티

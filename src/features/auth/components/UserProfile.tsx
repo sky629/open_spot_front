@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useUser, useAuthStore } from '../../../stores/auth';
 import { logger } from '../../../utils/logger';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfileProps {
   onLogout?: () => void;
@@ -12,18 +13,17 @@ interface UserProfileProps {
 
 export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className }) => {
   const user = useUser();
+  const navigate = useNavigate();
   const authStore = useAuthStore();
   const logout = authStore.logout;
-  const getUserProfile = authStore.getUserProfile;
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
       logger.userAction('User logout initiated');
 
       await logout();
+      navigate('/login');
 
       logger.userAction('User logout completed');
       onLogout?.();
@@ -31,21 +31,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
       logger.error('Logout failed', error);
     } finally {
       setIsLoggingOut(false);
-    }
-  };
-
-  const handleRefreshProfile = async () => {
-    try {
-      setIsRefreshing(true);
-      logger.userAction('Profile refresh initiated');
-
-      await getUserProfile();
-
-      logger.userAction('Profile refresh completed');
-    } catch (error) {
-      logger.error('Profile refresh failed', error);
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
@@ -71,26 +56,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
         </ProfileImage>
 
         <UserInfo>
-          <UserName>{user.name}</UserName>
-          <UserEmail>{user.email}</UserEmail>
+          <UserName>{user.name || '사용자'}</UserName>
+          <UserEmail>{user.email || 'user@example.com'}</UserEmail>
         </UserInfo>
-      </ProfileHeader>
-
-      <ActionButtons>
-        <RefreshButton
-          onClick={handleRefreshProfile}
-          disabled={isRefreshing}
-        >
-          {isRefreshing ? '새로고침 중...' : '프로필 새로고침'}
-        </RefreshButton>
 
         <LogoutButton
           onClick={handleLogout}
           disabled={isLoggingOut}
+          title={isLoggingOut ? '로그아웃 중...' : '로그아웃'}
         >
-          {isLoggingOut ? '로그아웃 중...' : '로그아웃'}
+          {isLoggingOut ? '⏳' : '🚪'}
         </LogoutButton>
-      </ActionButtons>
+      </ProfileHeader>
     </Container>
   );
 };
@@ -98,26 +75,21 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
 const Container = styled.div`
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  max-width: 300px;
 `;
 
 const ProfileHeader = styled.div`
   display: flex;
   align-items: center;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
 `;
 
 const ProfileImage = styled.div`
-  width: 3rem;
-  height: 3rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 50%;
   overflow: hidden;
-  margin-right: 1rem;
   flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
 
   img {
     width: 100%;
@@ -129,13 +101,14 @@ const ProfileImage = styled.div`
 const DefaultAvatar = styled.div`
   width: 100%;
   height: 100%;
-  background: linear-gradient(45deg, #667eea, #764ba2);
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.3));
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 1.25rem;
+  font-size: 1rem;
+  backdrop-filter: blur(10px);
 `;
 
 const UserInfo = styled.div`
@@ -144,64 +117,51 @@ const UserInfo = styled.div`
 `;
 
 const UserName = styled.h3`
-  font-size: 1.125rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: #2d3748;
-  margin: 0 0 0.25rem 0;
+  color: white;
+  margin: 0 0 0.125rem 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 `;
 
 const UserEmail = styled.p`
-  font-size: 0.875rem;
-  color: #718096;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.8);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 `;
 
-const ActionButtons = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-`;
-
-const Button = styled.button`
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
+const LogoutButton = styled.button`
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  backdrop-filter: blur(10px);
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-`;
-
-const RefreshButton = styled(Button)`
-  background-color: #f7fafc;
-  color: #4a5568;
-  border: 1px solid #e2e8f0;
-
-  &:hover:not(:disabled) {
-    background-color: #edf2f7;
-    border-color: #cbd5e0;
-  }
-`;
-
-const LogoutButton = styled(Button)`
-  background-color: #fed7d7;
-  color: #c53030;
-  border: 1px solid #feb2b2;
-
-  &:hover:not(:disabled) {
-    background-color: #fbb6b9;
-    border-color: #f687b3;
+    transform: none;
   }
 `;
 

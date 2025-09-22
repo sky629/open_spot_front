@@ -2,6 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { SidebarItem } from './SidebarItem';
 import { MAP_CATEGORIES } from '../../constants';
+import { colors, media, transitions, flex, shadows, keyframes } from '../../styles';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -18,26 +19,30 @@ const Overlay = styled.div<{ $isOpen: boolean; $isMobile: boolean }>`
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${colors.background.overlay};
   z-index: 1500;
   opacity: ${props => (props.$isOpen && props.$isMobile) ? 1 : 0};
   visibility: ${props => (props.$isOpen && props.$isMobile) ? 'visible' : 'hidden'};
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  transition: ${transitions.smooth};
+  backdrop-filter: blur(2px);
 `;
 
 const SidebarContainer = styled.div<{ $isOpen: boolean }>`
   position: relative;
   width: ${props => props.$isOpen ? '320px' : '0'};
   height: 100%;
-  background: white;
-  border-right: 1px solid #e8e8e8;
-  box-shadow: ${props => props.$isOpen ? '2px 0 10px rgba(0, 0, 0, 0.1)' : 'none'};
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  background: ${colors.surface.primary};
+  border-right: 1px solid ${colors.border.light};
+  box-shadow: ${props => props.$isOpen ? shadows.card : 'none'};
+  transition: ${transitions.smooth};
   overflow: hidden;
   flex-shrink: 0;
   z-index: 1002;
 
-  @media (max-width: 768px) {
+  ${keyframes.slideLeft}
+  animation: ${props => props.$isOpen ? 'slideLeft 0.3s ease-out' : 'none'};
+
+  ${media.mobile} {
     position: fixed;
     top: 0;
     left: 0;
@@ -45,128 +50,174 @@ const SidebarContainer = styled.div<{ $isOpen: boolean }>`
     width: ${props => props.$isOpen ? '85vw' : '0'};
     max-width: 320px;
     z-index: 1600;
-    box-shadow: ${props => props.$isOpen ? '2px 0 20px rgba(0, 0, 0, 0.2)' : 'none'};
+    box-shadow: ${props => props.$isOpen ? colors.shadow.xl : 'none'};
   }
 `;
 
 const SidebarHeader = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: white;
+  ${flex.between}
+  padding: 24px 20px;
+  border-bottom: 1px solid ${colors.border.light};
+  background: ${colors.gradients.header};
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
+    opacity: 0.5;
+  }
 `;
 
 const HeaderLeft = styled.div`
-  display: flex;
-  align-items: center;
+  ${flex.centerY}
   gap: 12px;
+  position: relative;
+  z-index: 1;
 `;
 
 const SidebarIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-size: 18px;
+  width: 44px;
+  height: 44px;
+  background: ${colors.surface.primary};
+  border-radius: 12px;
+  ${flex.center}
+  color: ${colors.primary.main};
+  font-size: 20px;
+  box-shadow: ${colors.shadow.sm};
+  position: relative;
+  z-index: 1;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: ${colors.primary.subtle};
+    border-radius: 12px;
+    opacity: 0.3;
+  }
 `;
 
 const SidebarTitle = styled.h2`
   margin: 0;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #333;
+  color: ${colors.text.inverse};
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 `;
 
 const CloseButton = styled.button`
-  background: none;
+  background: rgba(255, 255, 255, 0.2);
   border: none;
   cursor: pointer;
-  padding: 8px;
+  padding: 10px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #666;
-  font-size: 20px;
-  transition: background-color 0.2s ease;
+  ${flex.center}
+  color: ${colors.text.inverse};
+  font-size: 18px;
+  transition: ${transitions.default};
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(10px);
 
   &:hover {
-    background: #f5f5f5;
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
   }
 
-  @media (min-width: 769px) {
+  &:active {
+    transform: scale(0.95);
+  }
+
+  ${media.desktop} {
     display: none;
   }
 
   &:focus {
-    outline: 2px solid #03C75A;
+    outline: 2px solid rgba(255, 255, 255, 0.5);
     outline-offset: 2px;
   }
 `;
 
 const CategorySection = styled.div`
-  padding: 16px 0;
+  padding: 20px 0 16px 0;
 `;
 
 const SectionTitle = styled.h3`
-  margin: 0 0 12px 16px;
-  font-size: 16px;
+  margin: 0 0 16px 20px;
+  font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: ${colors.text.secondary};
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 `;
 
 const CategoryList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  ${flex.column}
+  gap: 4px;
+  padding: 0 16px;
 `;
 
 const PlacesSection = styled.div`
-  padding: 16px 0;
-  border-top: 1px solid #f0f0f0;
+  padding: 20px 0;
+  border-top: 1px solid ${colors.border.light};
+  margin-top: 16px;
 `;
 
 const EmptyState = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  ${flex.columnCenter}
   padding: 40px 20px;
-  color: #999;
+  color: ${colors.text.tertiary};
   text-align: center;
 `;
 
 const EmptyIcon = styled.div`
-  width: 60px;
-  height: 60px;
-  background: #f5f5f5;
+  width: 72px;
+  height: 72px;
+  background: ${colors.gradients.card};
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  margin-bottom: 16px;
-  color: #ccc;
+  ${flex.center}
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: ${colors.primary.light};
+  box-shadow: ${colors.shadow.sm};
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: ${colors.primary.subtle};
+    border-radius: 50%;
+    opacity: 0.3;
+  }
 `;
 
 const EmptyText = styled.p`
   margin: 0 0 8px 0;
   font-size: 16px;
   font-weight: 500;
-  color: #666;
+  color: ${colors.text.secondary};
 `;
 
 const EmptySubtext = styled.p`
   margin: 0;
   font-size: 14px;
-  color: #999;
-  line-height: 1.4;
+  color: ${colors.text.tertiary};
+  line-height: 1.5;
 `;
 
 

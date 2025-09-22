@@ -27,8 +27,10 @@ export const loadNaverMaps = (): Promise<void> => {
     }
 
     const clientId = __NAVER_MAP_CLIENT_ID__;
+    logger.info('🗺️ Naver Maps Client ID:', clientId);
 
     if (!clientId) {
+      logger.error('❌ 네이버 지도 API 클라이언트 ID가 설정되지 않았습니다.');
       reject(new Error('네이버 지도 API 클라이언트 ID가 설정되지 않았습니다.'));
       return;
     }

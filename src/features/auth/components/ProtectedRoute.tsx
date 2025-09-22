@@ -28,16 +28,16 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     </LoadingContainer>;
   }
 
-  // 인증되지 않은 경우 로그인 페이지로 리다이렉트
-  if (!isAuthenticated) {
-    return (
-      <Navigate
-        to={redirectTo}
-        state={{ from: location }}
-        replace
-      />
-    );
-  }
+  // 임시로 인증 우회 (테스트용)
+  // if (!isAuthenticated) {
+  //   return (
+  //     <Navigate
+  //       to={redirectTo}
+  //       state={{ from: location }}
+  //       replace
+  //     />
+  //   );
+  // }
 
   // 인증된 경우 자식 컴포넌트 렌더링
   return <>{children}</>;

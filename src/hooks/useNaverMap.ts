@@ -21,15 +21,23 @@ export const useNaverMap = ({
   const [map, setMap] = useState<NaverMap | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
+  logger.info('🗺️ useNaverMap hook initialized', { center, zoom });
+  logger.info('🗺️ useNaverMap hook - mapRef.current:', mapRef.current);
+
   useEffect(() => {
     const initializeMap = async () => {
       if (!mapRef.current) {
+        logger.warn('Map container not found, retrying...');
         return;
       }
 
       try {
+        logger.info('Initializing Naver Map...');
+
         // 네이버 지도 API 동적 로드
         await loadNaverMaps();
+
+        logger.info('Naver Maps API loaded, creating map instance...');
 
         const mapOptions: NaverMapOptions = {
           center: new window.naver.maps.LatLng(center.lat, center.lng),
@@ -40,10 +48,18 @@ export const useNaverMap = ({
           logoControl: true,
           mapTypeControl: true,
           zoomControl: true,
+          // 지도 인터랙션 활성화
+          draggable: true,
+          scrollWheel: true,
+          keyboardShortcuts: true,
+          disableDoubleClickZoom: false,
+          disableKineticPan: false,
           ...options,
         };
 
         const naverMap = new window.naver.maps.Map(mapRef.current, mapOptions);
+
+        logger.info('Naver Map instance created successfully');
 
         setMap(naverMap);
         setIsLoaded(true);
@@ -53,8 +69,12 @@ export const useNaverMap = ({
       }
     };
 
-    initializeMap();
-  }, [center.lat, center.lng, zoom, options]);
+    // 이미 지도가 생성된 경우 다시 생성하지 않음
+    if (!map) {
+      const timeoutId = setTimeout(initializeMap, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [center.lat, center.lng, zoom, map]);
 
   const setCenter = (newCenter: NaverLatLng) => {
     if (map) {

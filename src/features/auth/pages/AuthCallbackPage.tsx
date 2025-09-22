@@ -3,13 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { useAuthActions } from '../../../stores/auth';
+import { useAuthStore } from '../../../stores/auth';
 import { logger } from '../../../utils/logger';
 
 export const AuthCallbackPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { setUserFromToken, setError } = useAuthActions();
+  const setUserFromToken = useAuthStore((state) => state.setUserFromToken);
+  const setError = useAuthStore((state) => state.setError);
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [message, setMessage] = useState('인증을 처리하는 중입니다...');
 

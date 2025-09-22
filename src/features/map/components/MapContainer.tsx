@@ -1,6 +1,6 @@
 // Map Container Component
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useLocations, useLocationStore } from '../../../stores/location';
 import { LocationMarker } from './LocationMarker';
@@ -16,16 +16,25 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   onLocationSelect,
   className
 }) => {
-  const mapRef = useRef<HTMLDivElement>(null);
+  logger.info('🚀 MapContainer component rendering...');
+
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const lastBoundsRef = useRef<{ne: {lat: number, lng: number}, sw: {lat: number, lng: number}} | null>(null);
 
   const locations = useLocations();
   const setSelectedLocation = useLocationStore((state) => state.setSelectedLocation);
 
-  const { map, isLoaded } = useNaverMap({
+  const { mapRef, map, isLoaded } = useNaverMap({
     center: { lat: 37.5665, lng: 126.9780 }, // 서울 시청
     zoom: 13,
     options: {
+      // 지도 인터랙션 활성화
+      draggable: true,
+      scrollWheel: true,
+      keyboardShortcuts: true,
+      disableDoubleClickZoom: false,
+      disableKineticPan: false,
       scaleControl: true,
       logoControl: true,
       mapDataControl: true,
@@ -33,73 +42,153 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     }
   });
 
+  // bounds가 유의미하게 변경되었는지 확인하는 함수 - useCallback으로 메모이제이션
+  const hasBoundsChanged = useCallback((newBounds: {ne: {lat: number, lng: number}, sw: {lat: number, lng: number}}) => {
+    if (!lastBoundsRef.current) return true;
+
+    const prev = lastBoundsRef.current;
+    const THRESHOLD = 0.001; // 약 100m 정도의 변화량
+
+    return (
+      Math.abs(newBounds.ne.lat - prev.ne.lat) > THRESHOLD ||
+      Math.abs(newBounds.ne.lng - prev.ne.lng) > THRESHOLD ||
+      Math.abs(newBounds.sw.lat - prev.sw.lat) > THRESHOLD ||
+      Math.abs(newBounds.sw.lng - prev.sw.lng) > THRESHOLD
+    );
+  }, []);
+
+  // API 호출 함수 - useCallback으로 메모이제이션
+  const fetchLocationsWithBounds = useCallback(async (bounds: {ne: {lat: number, lng: number}, sw: {lat: number, lng: number}}) => {
+    if (!hasBoundsChanged(bounds) || isLoadingLocations) {
+      logger.info('🔄 API 호출 스킵 - bounds 변화 없음 또는 로딩 중');
+      return;
+    }
+
+    try {
+      setIsLoadingLocations(true);
+      const fetchLocationsByBounds = useLocationStore.getState().fetchLocationsByBounds;
+
+      await fetchLocationsByBounds(bounds.ne, bounds.sw);
+      lastBoundsRef.current = bounds;
+
+      logger.info('✅ Locations 로드 완료', bounds);
+    } catch (error) {
+      logger.error('❌ Locations 로드 실패', error);
+    } finally {
+      setIsLoadingLocations(false);
+    }
+  }, [hasBoundsChanged, isLoadingLocations]);
+
   // 지도 로드 완료 처리
   useEffect(() => {
     if (map && isLoaded) {
       setIsMapLoaded(true);
-      logger.info('Map loaded successfully');
+      logger.info('🗺️ Map 로드 완료');
 
-      // 초기 위치 데이터 로드
-      const bounds = map.getBounds && map.getBounds();
-      if (bounds) {
-        const ne = (bounds as any).northEast || (bounds as any).getNorthEast();
-        const sw = (bounds as any).southWest || (bounds as any).getSouthWest();
+      // 초기 위치 데이터 로드 - 약간의 지연을 두고 실행
+      const timer = setTimeout(() => {
+        try {
+          const bounds = map.getBounds && map.getBounds();
+          if (bounds) {
+            let northEast, southWest;
 
-        // 스토어에서 직접 함수를 가져와서 호출하여 의존성 문제 해결
-        const fetchLocationsByBounds = useLocationStore.getState().fetchLocationsByBounds;
-        fetchLocationsByBounds(
-          { lat: ne.lat || ne.lat(), lng: ne.lng || ne.lng() },
-          { lat: sw.lat || sw.lat(), lng: sw.lng || sw.lng() }
-        ).catch(error => {
-          logger.error('Failed to load initial locations', error);
-        });
-      }
+            try {
+              if (typeof bounds.getNorthEast === 'function') {
+                northEast = bounds.getNorthEast();
+                southWest = bounds.getSouthWest();
+              } else if (typeof bounds.getMax === 'function') {
+                northEast = bounds.getMax();
+                southWest = bounds.getMin();
+              } else {
+                northEast = (bounds as any).northEast;
+                southWest = (bounds as any).southWest;
+              }
+
+              if (northEast && southWest) {
+                const boundsData = {
+                  ne: {
+                    lat: typeof northEast.lat === 'function' ? northEast.lat() : northEast.lat,
+                    lng: typeof northEast.lng === 'function' ? northEast.lng() : northEast.lng
+                  },
+                  sw: {
+                    lat: typeof southWest.lat === 'function' ? southWest.lat() : southWest.lat,
+                    lng: typeof southWest.lng === 'function' ? southWest.lng() : southWest.lng
+                  }
+                };
+
+                fetchLocationsWithBounds(boundsData);
+              }
+            } catch (boundsError) {
+              logger.warn('🚧 지도 bounds 가져오기 실패', boundsError);
+            }
+          }
+        } catch (error) {
+          logger.error('❌ 초기 위치 로딩 오류', error);
+        }
+      }, 1000);
+
+      return () => clearTimeout(timer);
     }
-  }, [map, isLoaded]); // fetchLocationsByBounds 의존성 제거
+  }, [map, isLoaded, fetchLocationsWithBounds]);
 
-  // 지도 이동 시 위치 데이터 업데이트
+  // 지도 이동 시 위치 데이터 업데이트 - idle 이벤트 사용
   useEffect(() => {
-    if (!map) return;
+    if (!map || !isLoaded) return;
 
-    const handleBoundsChanged = () => {
-      const bounds = map.getBounds();
-      if (bounds) {
-        const ne = (bounds as any).northEast || (bounds as any).getNorthEast();
-        const sw = (bounds as any).southWest || (bounds as any).getSouthWest();
+    const handleMapIdle = () => {
+      try {
+        const bounds = map.getBounds();
+        if (bounds) {
+          let northEast, southWest;
 
-        // 스토어에서 직접 함수를 가져와서 호출하여 의존성 문제 해결
-        const fetchLocationsByBounds = useLocationStore.getState().fetchLocationsByBounds;
-        fetchLocationsByBounds(
-          { lat: ne.lat || ne.lat(), lng: ne.lng || ne.lng() },
-          { lat: sw.lat || sw.lat(), lng: sw.lng || sw.lng() }
-        ).catch(error => {
-          logger.error('Failed to update locations on bounds change', error);
-        });
+          try {
+            if (typeof bounds.getNorthEast === 'function') {
+              northEast = bounds.getNorthEast();
+              southWest = bounds.getSouthWest();
+            } else if (typeof bounds.getMax === 'function') {
+              northEast = bounds.getMax();
+              southWest = bounds.getMin();
+            } else {
+              northEast = (bounds as any).northEast;
+              southWest = (bounds as any).southWest;
+            }
+
+            if (northEast && southWest) {
+              const boundsData = {
+                ne: {
+                  lat: typeof northEast.lat === 'function' ? northEast.lat() : northEast.lat,
+                  lng: typeof northEast.lng === 'function' ? northEast.lng() : northEast.lng
+                },
+                sw: {
+                  lat: typeof southWest.lat === 'function' ? southWest.lat() : southWest.lat,
+                  lng: typeof southWest.lng === 'function' ? southWest.lng() : southWest.lng
+                }
+              };
+
+              fetchLocationsWithBounds(boundsData);
+            }
+          } catch (boundsError) {
+            logger.warn('🚧 지도 idle 시 bounds 가져오기 실패', boundsError);
+          }
+        }
+      } catch (error) {
+        logger.error('❌ 지도 idle 핸들러 오류', error);
       }
     };
 
-    // 디바운스된 이벤트 핸들러
-    let timeoutId: NodeJS.Timeout;
-    const debouncedHandler = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleBoundsChanged, 500);
-    };
-
-    const listener = window.naver.maps.Event.addListener(map, 'bounds_changed', debouncedHandler);
+    // idle 이벤트는 사용자가 지도 조작을 멈춘 후 발생
+    const listener = window.naver.maps.Event.addListener(map, 'idle', handleMapIdle);
 
     return () => {
       window.naver.maps.Event.removeListener(listener);
-      clearTimeout(timeoutId);
     };
-  }, [map]); // fetchLocationsByBounds 의존성 제거
+  }, [map, isLoaded, fetchLocationsWithBounds]);
 
   const handleLocationClick = (location: any) => {
     setSelectedLocation(location);
     onLocationSelect?.(location);
     logger.userAction('Location marker clicked', { locationId: location.id });
   };
-
-  // 지도 에러 처리는 useNaverMap 훅에서 처리
 
   return (
     <Container className={className}>
@@ -112,7 +201,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         </LoadingOverlay>
       )}
 
-      {isMapLoaded && map && locations.map(location => (
+      {isMapLoaded && map && locations && locations.map(location => (
         <LocationMarker
           key={location.id}
           map={map}
@@ -123,7 +212,8 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
       <MapControls>
         <LocationCount>
-          📍 {locations.length}개 위치
+          📍 {locations?.length || 0}개 위치
+          {isLoadingLocations && ' (로딩 중...)'}
         </LocationCount>
       </MapControls>
     </Container>
@@ -178,22 +268,23 @@ const LoadingText = styled.p`
   margin: 0;
 `;
 
-// Error handling components removed - errors are handled in the hook
-
 const MapControls = styled.div`
   position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 100;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 1001;
 `;
 
 const LocationCount = styled.div`
-  background-color: rgba(255, 255, 255, 0.95);
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 500;
   color: #2d3748;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(8px);
+  border: 1px solid #e2e8f0;
 `;

@@ -5,147 +5,224 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer } from '../components/Map';
 import { Sidebar } from '../components/Sidebar';
+import { UserProfile } from '../features/auth/components/UserProfile';
 import { MAP_CONFIG, MAP_CATEGORIES } from '../constants';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocations } from '../hooks';
 import { logger } from '../utils/logger';
+import { colors, media, transitions, shadows } from '../styles';
 import type { LocationResponse } from '../types';
 
 const PageContainer = styled.div`
   display: flex;
-  flex-direction: row;
-  height: 100vh;
-  overflow: hidden;
-  position: relative;
-`;
-
-const MainContent = styled.div`
-  display: flex;
   flex-direction: column;
-  flex: 1;
   height: 100vh;
   overflow: hidden;
-  position: relative;
+  background: ${colors.background.primary};
 `;
 
-const Header = styled.header`
-  background: #fff;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e8e8e8;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
-  z-index: 1000;
+const TopNavBar = styled.nav`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  background: ${colors.gradients.header};
+  border-bottom: 1px solid ${colors.border.light};
+  box-shadow: ${shadows.card};
+  z-index: 1001;
+  padding: 0 24px;
+  position: relative;
+
+  ${media.mobile} {
+    height: 56px;
+    padding: 0 16px;
+  }
+`;
+
+const NavLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+`;
+
+const NavRight = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
-  position: relative;
+`;
 
-  @media (max-width: 768px) {
-    padding: 12px 16px;
-    flex-direction: column;
-    gap: 12px;
+const MainLayout = styled.div`
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+`;
+
+const SidebarWrapper = styled.div`
+  width: 320px;
+  flex-shrink: 0;
+  background: ${colors.surface.primary};
+  border-right: 1px solid ${colors.border.light};
+  box-shadow: ${shadows.card};
+  overflow-y: auto;
+
+  ${media.mobile} {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+`;
+
+const MobileOverlay = styled.div<{ $isOpen: boolean }>`
+  display: none;
+
+  ${media.mobile} {
+    display: block;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: ${props => props.$isOpen ? 1 : 0};
+    visibility: ${props => props.$isOpen ? 'visible' : 'hidden'};
+    transition: all 0.3s ease;
+    backdrop-filter: blur(2px);
   }
 `;
 
 const SidebarToggleButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  background: transparent;
-  border: 1px solid #e8e8e8;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #666;
-  font-size: 18px;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  display: none;
 
-  &:hover {
-    background: #f8f9fa;
-    border-color: #03C75A;
-    color: #03C75A;
-  }
-
-  &:focus {
-    outline: 2px solid #03C75A;
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 768px) {
+  ${media.mobile} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 36px;
     height: 36px;
-    font-size: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: ${transitions.default};
+    backdrop-filter: blur(10px);
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
   }
 `;
 
-const Logo = styled.div`
+const MainContent = styled.div`
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
 `;
 
-const LogoIcon = styled.div`
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #03C75A 0%, #029E4A 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 16px;
-`;
-
-const Title = styled.h1`
-  margin: 0;
-  font-size: 20px;
-  color: #2d2d2d;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-
-  @media (max-width: 768px) {
-    font-size: 18px;
-  }
+const ContentArea = styled.div`
+  flex: 1;
+  position: relative;
+  overflow: hidden;
 `;
 
 const SearchContainer = styled.div`
+  display: flex;
+  align-items: center;
   flex: 1;
-  max-width: 600px;
+  max-width: 500px;
   position: relative;
 
-  @media (max-width: 768px) {
-    width: 100%;
+  ${media.mobile} {
     max-width: none;
+  }
+`;
+
+const HomeLogoButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 12px;
+  transition: ${transitions.default};
+  color: white;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+const LogoIcon = styled.div`
+  width: 36px;
+  height: 36px;
+  background: ${colors.surface.primary};
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: ${colors.primary.main};
+  font-weight: bold;
+  font-size: 18px;
+  box-shadow: ${colors.shadow.sm};
+`;
+
+const LogoText = styled.span`
+  font-size: 20px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+
+  ${media.mobile} {
+    font-size: 18px;
   }
 `;
 
 const SearchInput = styled.input`
   width: 100%;
-  height: 48px;
-  padding: 0 50px 0 16px;
-  border: 2px solid #e8e8e8;
-  border-radius: 24px;
-  font-size: 16px;
-  background: #fafafa;
-  transition: all 0.2s ease;
+  height: 40px;
+  padding: 0 48px 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  backdrop-filter: blur(10px);
+  transition: ${transitions.default};
 
   &:focus {
     outline: none;
-    border-color: #03C75A;
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(3, 199, 90, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
   }
 
   &::placeholder {
-    color: #999;
+    color: rgba(255, 255, 255, 0.7);
   }
 
-  @media (max-width: 768px) {
-    height: 44px;
-    font-size: 15px;
+  ${media.mobile} {
+    height: 36px;
+    font-size: 13px;
+    padding: 0 40px 0 14px;
   }
 `;
 
@@ -154,157 +231,65 @@ const SearchButton = styled.button`
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: #03C75A;
-  border-radius: 50%;
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s ease;
-
-  &:hover {
-    background: #029E4A;
-  }
-
-  @media (max-width: 768px) {
-    width: 28px;
-    height: 28px;
-  }
-`;
-
-const FilterContainer = styled.div`
-  display: flex;
-  gap: 8px;
-  align-items: center;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-`;
-
-const UserSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
-
-  @media (max-width: 768px) {
-    margin-left: 0;
-    order: 3;
-    width: 100%;
-    justify-content: center;
-    margin-top: 12px;
-  }
-`;
-
-const UserProfile = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-radius: 20px;
-  font-size: 14px;
-  color: #666;
-`;
-
-const UserAvatar = styled.div`
   width: 28px;
   height: 28px;
-  background: #03C75A;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
+  color: white;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-weight: bold;
-  font-size: 12px;
-`;
-
-const LogoutButton = styled.button`
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  color: #666;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  transition: ${transitions.default};
+  backdrop-filter: blur(10px);
 
   &:hover {
-    border-color: #ff4444;
-    color: #ff4444;
-    background: #fff5f5;
-  }
-`;
-
-const CategoryChip = styled.button<{ $isActive: boolean }>`
-  padding: 8px 16px;
-  border: 1px solid ${props => props.$isActive ? '#03C75A' : '#e8e8e8'};
-  border-radius: 20px;
-  background: ${props => props.$isActive ? '#03C75A' : '#fff'};
-  color: ${props => props.$isActive ? '#fff' : '#666'};
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-
-  &:hover {
-    border-color: #03C75A;
-    background: ${props => props.$isActive ? '#029E4A' : '#f8fff8'};
-    color: ${props => props.$isActive ? '#fff' : '#03C75A'};
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.05);
   }
 
-  @media (max-width: 768px) {
-    padding: 6px 12px;
-    font-size: 13px;
+  &:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
+  ${media.mobile} {
+    width: 24px;
+    height: 24px;
+    right: 6px;
   }
 `;
 
 const InfoPanel = styled.div`
   position: absolute;
-  top: 20px;
-  right: 20px;
-  background: white;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  max-width: 320px;
+  top: 24px;
+  right: 24px;
+  background: ${colors.surface.primary};
+  padding: 24px;
+  border-radius: 20px;
+  box-shadow: ${colors.shadow.xl};
+  max-width: 340px;
   z-index: 1001;
-  border: 1px solid #f0f0f0;
+  border: 1px solid ${colors.border.light};
 
-  @media (max-width: 768px) {
-    top: 16px;
-    right: 16px;
-    left: 16px;
+  ${media.tablet} {
+    top: 20px;
+    right: 20px;
+    left: 20px;
     max-width: none;
-    padding: 16px;
-  }
-
-  @media (max-width: 480px) {
-    position: fixed;
-    bottom: 20px;
-    top: auto;
-    left: 16px;
-    right: 16px;
-    border-radius: 20px;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
     padding: 20px;
   }
-`;
 
-const MapSection = styled.main`
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: #f8f9fa;
+  ${media.mobile} {
+    position: fixed;
+    bottom: 24px;
+    top: auto;
+    left: 20px;
+    right: 20px;
+    border-radius: 24px;
+    box-shadow: ${colors.shadow.xl};
+    padding: 24px;
+  }
 `;
 
 const LocationInfo = styled.div`
@@ -414,14 +399,6 @@ export const MapPage: React.FC = () => {
   // 위치 데이터와 카테고리별 개수 가져오기
   const { locations, locationCounts } = useLocations();
 
-  const categories = [
-    { key: MAP_CATEGORIES.ALL, label: '전체' },
-    { key: MAP_CATEGORIES.RESTAURANT, label: '음식점' },
-    { key: MAP_CATEGORIES.CAFE, label: '카페' },
-    { key: MAP_CATEGORIES.SHOPPING, label: '쇼핑' },
-    { key: MAP_CATEGORIES.PARK, label: '공원' },
-  ];
-
   const handleLocationClick = (location: LocationResponse) => {
     logger.userAction('Location marker clicked', {
       locationId: location.id,
@@ -473,108 +450,107 @@ export const MapPage: React.FC = () => {
     logger.userAction('Sidebar toggled', { isOpen: !isSidebarOpen });
   };
 
+  const handleHomeClick = () => {
+    navigate('/');
+    logger.userAction('Home button clicked');
+  };
+
   return (
     <PageContainer>
-      <Sidebar
-        isOpen={isSidebarOpen}
-        selectedCategory={selectedCategory}
-        onCategoryChange={handleCategoryChange}
-        onToggle={handleSidebarToggle}
-        locationCounts={locationCounts}
-      />
-
-      <MainContent>
-        <Header>
+      {/* 상단 네비게이션 바 */}
+      <TopNavBar>
+        <NavLeft>
           <SidebarToggleButton onClick={handleSidebarToggle}>
-            {isSidebarOpen ? '✕' : '☰'}
+            ☰
           </SidebarToggleButton>
-        <Logo>
-          <LogoIcon>OS</LogoIcon>
-          <Title>Open Spot</Title>
-        </Logo>
 
-        <SearchContainer>
-          <SearchInput
-            type="text"
-            placeholder="장소, 주소 검색"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+          <HomeLogoButton onClick={handleHomeClick}>
+            <LogoIcon>OS</LogoIcon>
+            <LogoText>Open Spot</LogoText>
+          </HomeLogoButton>
+
+          <SearchContainer>
+            <SearchInput
+              type="text"
+              placeholder="장소, 주소 검색"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            />
+            <SearchButton onClick={handleSearch}>
+              🔍
+            </SearchButton>
+          </SearchContainer>
+        </NavLeft>
+
+        <NavRight>
+          <UserProfile onLogout={handleLogout} />
+        </NavRight>
+      </TopNavBar>
+
+      {/* 모바일 오버레이 */}
+      <MobileOverlay $isOpen={isSidebarOpen} onClick={handleSidebarToggle} />
+
+      {/* 메인 레이아웃 */}
+      <MainLayout>
+        {/* 왼쪽 사이드바 */}
+        <SidebarWrapper className={isSidebarOpen ? 'open' : ''}>
+          <Sidebar
+            isOpen={true}
+            selectedCategory={selectedCategory}
+            onCategoryChange={handleCategoryChange}
+            onToggle={handleSidebarToggle}
+            locationCounts={locationCounts}
           />
-          <SearchButton onClick={handleSearch}>
-            🔍
-          </SearchButton>
-        </SearchContainer>
+        </SidebarWrapper>
 
-        <FilterContainer>
-          {categories.map((category) => (
-            <CategoryChip
-              key={category.key}
-              $isActive={selectedCategory === category.key}
-              onClick={() => handleCategoryChange(category.key)}
-            >
-              {category.label}
-            </CategoryChip>
-          ))}
-        </FilterContainer>
+        {/* 메인 콘텐츠 영역 */}
+        <MainContent>
+          <ContentArea>
+            <MapContainer
+              center={MAP_CONFIG.DEFAULT_CENTER}
+              zoom={MAP_CONFIG.DEFAULT_ZOOM}
+              locations={locations}
+              onMapLoad={handleMapLoad}
+              onBoundsChanged={handleBoundsChanged}
+              onLocationClick={handleLocationClick}
+            />
 
-        <UserSection>
-          <UserProfile>
-            <UserAvatar>
-              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-            </UserAvatar>
-            {user?.name || 'User'}
-          </UserProfile>
-          <LogoutButton onClick={handleLogout}>
-            로그아웃
-          </LogoutButton>
-        </UserSection>
-      </Header>
+            <MapControls>
+              <ControlButton title="현재 위치">
+                📍
+              </ControlButton>
+              <ControlButton title="길찾기">
+                🧭
+              </ControlButton>
+              <ControlButton title="즐겨찾기">
+                ⭐
+              </ControlButton>
+            </MapControls>
 
-      <MapSection>
-        <MapContainer
-          center={MAP_CONFIG.DEFAULT_CENTER}
-          zoom={MAP_CONFIG.DEFAULT_ZOOM}
-          locations={locations}
-          onMapLoad={handleMapLoad}
-          onBoundsChanged={handleBoundsChanged}
-          onLocationClick={handleLocationClick}
-        />
-
-        <MapControls>
-          <ControlButton title="현재 위치">
-            📍
-          </ControlButton>
-          <ControlButton title="길찾기">
-            🧭
-          </ControlButton>
-          <ControlButton title="즐겨찾기">
-            ⭐
-          </ControlButton>
-        </MapControls>
-
-        {selectedLocation && (
-          <InfoPanel>
-            <LocationInfo>
-              <LocationTitle>{selectedLocation.name}</LocationTitle>
-              {selectedLocation.description && (
-                <LocationDescription>
-                  {selectedLocation.description}
-                </LocationDescription>
-              )}
-              {selectedLocation.category && (
-                <LocationCategory>
-                  {selectedLocation.category}
-                </LocationCategory>
-              )}
-            </LocationInfo>
-            <CloseButton onClick={() => setSelectedLocation(null)}>
-              닫기
-            </CloseButton>
-          </InfoPanel>
-        )}
-        </MapSection>
-      </MainContent>
+            {selectedLocation && (
+              <InfoPanel>
+                <LocationInfo>
+                  <LocationTitle>{selectedLocation.name}</LocationTitle>
+                  {selectedLocation.description && (
+                    <LocationDescription>
+                      {selectedLocation.description}
+                    </LocationDescription>
+                  )}
+                  {selectedLocation.category && (
+                    <LocationCategory>
+                      {selectedLocation.category}
+                    </LocationCategory>
+                  )}
+                </LocationInfo>
+                <CloseButton onClick={() => setSelectedLocation(null)}>
+                  닫기
+                </CloseButton>
+              </InfoPanel>
+            )}
+          </ContentArea>
+        </MainContent>
+      </MainLayout>
     </PageContainer>
   );
 };

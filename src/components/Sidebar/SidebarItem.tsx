@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { colors, transitions, flex } from '../../styles';
 
 interface SidebarItemProps {
   icon: string;
@@ -10,52 +11,74 @@ interface SidebarItemProps {
 }
 
 const ItemContainer = styled.div<{ $isActive?: boolean }>`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  margin: 4px 8px;
-  border-radius: 8px;
+  ${flex.between}
+  padding: 14px 16px;
+  margin: 2px 0;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background: ${props => props.$isActive ? '#E3F2FD' : 'transparent'};
-  border: 1px solid ${props => props.$isActive ? '#2196F3' : 'transparent'};
+  transition: ${transitions.default};
+  background: ${props => props.$isActive ? colors.primary.subtle : 'transparent'};
+  border: 1px solid ${props => props.$isActive ? colors.primary.light : 'transparent'};
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: ${props => props.$isActive ? '3px' : '0'};
+    background: ${colors.primary.main};
+    transition: ${transitions.default};
+  }
 
   &:hover {
-    background: ${props => props.$isActive ? '#E3F2FD' : '#f5f5f5'};
+    background: ${props => props.$isActive ? colors.primary.subtle : colors.surface.hover};
+    transform: translateX(2px);
+    box-shadow: ${colors.shadow.sm};
+  }
+
+  &:active {
+    transform: translateX(0);
   }
 `;
 
 const LeftSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  ${flex.centerY}
+  gap: 14px;
 `;
 
 const IconWrapper = styled.div`
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  ${flex.center}
+  font-size: 18px;
+  color: ${colors.primary.main};
+  background: ${colors.primary.ultraLight};
+  border-radius: 8px;
+  transition: ${transitions.default};
 `;
 
-const Label = styled.span`
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
+const Label = styled.span<{ $isActive?: boolean }>`
+  font-size: 15px;
+  font-weight: ${props => props.$isActive ? 600 : 500};
+  color: ${props => props.$isActive ? colors.primary.main : colors.text.primary};
+  transition: ${transitions.default};
 `;
 
 const CountBadge = styled.span<{ $isActive?: boolean }>`
-  background: ${props => props.$isActive ? '#2196F3' : '#e0e0e0'};
-  color: ${props => props.$isActive ? 'white' : '#666'};
-  font-size: 12px;
+  background: ${props => props.$isActive ? colors.primary.main : colors.surface.secondary};
+  color: ${props => props.$isActive ? colors.text.inverse : colors.text.secondary};
+  font-size: 13px;
   font-weight: 600;
-  padding: 4px 8px;
-  border-radius: 12px;
-  min-width: 20px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  min-width: 24px;
   text-align: center;
+  transition: ${transitions.default};
+  box-shadow: ${props => props.$isActive ? colors.shadow.sm : 'none'};
+  border: 1px solid ${props => props.$isActive ? colors.primary.main : colors.border.secondary};
 `;
 
 export const SidebarItem: React.FC<SidebarItemProps> = ({
@@ -69,9 +92,9 @@ export const SidebarItem: React.FC<SidebarItemProps> = ({
     <ItemContainer $isActive={isActive} onClick={onClick}>
       <LeftSection>
         <IconWrapper>{icon}</IconWrapper>
-        <Label>{label}</Label>
+        <Label $isActive={isActive}>{label}</Label>
       </LeftSection>
-      <CountBadge $isActive={isActive}>({count})</CountBadge>
+      <CountBadge $isActive={isActive}>{count}</CountBadge>
     </ItemContainer>
   );
 };

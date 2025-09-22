@@ -63,10 +63,10 @@ export const registerServices = (): void => {
       true // 싱글톤
     );
 
-    // 4. 위치 서비스 등록
+    // 4. 위치 서비스 등록 (정적 클래스로 등록)
     container.register(
       SERVICE_TOKENS.LOCATION_SERVICE,
-      () => new LocationService(),
+      () => LocationService,
       true // 싱글톤
     );
 
