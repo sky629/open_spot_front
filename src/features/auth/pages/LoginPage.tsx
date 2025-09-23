@@ -1,10 +1,11 @@
 // Unified Login Page Component with OAuth Callback
 
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { LoginForm } from '../components';
 import { useIsAuthenticated, useAuthStore } from '../../../stores/auth';
+import { LoginErrorCode } from '../types';
 import { logger } from '../../../utils/logger';
 
 export const LoginPage: React.FC = () => {
@@ -14,7 +15,6 @@ export const LoginPage: React.FC = () => {
   const isAuthenticated = useIsAuthenticated();
 
   // OAuth 콜백 상태 관리 (간소화)
-  const [isProcessing, setIsProcessing] = useState(false);
   const isProcessedRef = useRef(false);
 
   // URL 파라미터에서 토큰 확인하여 OAuth 콜백인지 판단
@@ -33,7 +33,6 @@ export const LoginPage: React.FC = () => {
 
     try {
       isProcessedRef.current = true;
-      setIsProcessing(true);
 
       const { setLoading, setError, setUser } = useAuthStore.getState();
       setLoading(true);
@@ -42,16 +41,35 @@ export const LoginPage: React.FC = () => {
       const refreshToken = searchParams.get('refresh_token');
       const userParam = searchParams.get('user');
       const error = searchParams.get('error');
+      const code = searchParams.get('code');
+      const msg = searchParams.get('msg');
+      const details = searchParams.get('details');
 
       logger.info('🔍 OAuth callback processing', {
         hasToken: !!token,
         hasRefreshToken: !!refreshToken,
         hasUser: !!userParam,
-        hasError: !!error
+        hasError: !!error,
+        hasCode: !!code,
+        hasMsg: !!msg,
+        hasDetails: !!details
       });
 
-      if (error) {
-        throw new Error(`OAuth Error: ${error}`);
+      // 에러 처리 - 서버에서 /login/error로 보내는 파라미터들 확인
+      if (error || code) {
+        // 구체적인 에러 코드가 있으면 /login/error로 리다이렉트
+        if (code) {
+          const errorParams = new URLSearchParams({
+            code,
+            ...(msg && { msg }),
+            ...(details && { details })
+          });
+          navigate(`/login/error?${errorParams.toString()}`, { replace: true });
+          return;
+        } else {
+          // 레거시 error 파라미터 처리
+          throw new Error(`OAuth Error: ${error}`);
+        }
       }
 
       if (!token) {
@@ -114,8 +132,16 @@ export const LoginPage: React.FC = () => {
       logger.error('OAuth callback failed', error);
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      const { setError, setLoading } = useAuthStore.getState();
+      const { setError, setLoginError, setLoading } = useAuthStore.getState();
+
+      // 기존 error와 새로운 loginError 모두 설정
       setError(errorMessage);
+      setLoginError({
+        code: LoginErrorCode.AUTH_FAILED,
+        message: errorMessage,
+        details: error instanceof Error ? error.stack : undefined,
+        timestamp: Date.now()
+      });
 
       // 즉시 로그인 페이지로 리셋
       navigate('/login', { replace: true });

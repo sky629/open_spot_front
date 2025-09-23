@@ -48,12 +48,6 @@ export const useNaverMap = ({
           logoControl: true,
           mapTypeControl: true,
           zoomControl: true,
-          // 지도 인터랙션 활성화
-          draggable: true,
-          scrollWheel: true,
-          keyboardShortcuts: true,
-          disableDoubleClickZoom: false,
-          disableKineticPan: false,
           ...options,
         };
 

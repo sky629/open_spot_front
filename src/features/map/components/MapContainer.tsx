@@ -30,11 +30,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     zoom: 13,
     options: {
       // 지도 인터랙션 활성화
-      draggable: true,
-      scrollWheel: true,
-      keyboardShortcuts: true,
-      disableDoubleClickZoom: false,
-      disableKineticPan: false,
       scaleControl: true,
       logoControl: true,
       mapDataControl: true,

@@ -1,0 +1,41 @@
+# Docker Compose for production deployment
+
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: open-spot-frontend
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - NGINX_WORKER_PROCESSES=auto
+    restart: unless-stopped
+    networks:
+      - openspot-network
+    volumes:
+      # Persistent logs
+      - nginx_logs:/var/log/nginx
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.openspot.service=frontend"
+      - "com.openspot.environment=production"
+
+networks:
+  openspot-network:
+    external: true
+    name: openspot-network
+
+volumes:
+  nginx_logs:
+    driver: local
+    name: open-spot-nginx-logs

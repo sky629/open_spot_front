@@ -1,0 +1,96 @@
+# Docker Compose for development environment
+
+version: '3.8'
+
+services:
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: open-spot-frontend-dev
+    ports:
+      - "3000:3000"  # Vite dev server
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_HMR_HOST=0.0.0.0
+      - VITE_NAVER_MAP_CLIENT_ID=${VITE_NAVER_MAP_CLIENT_ID}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8080}
+      - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+      - VITE_OAUTH_REDIRECT_URI=${VITE_OAUTH_REDIRECT_URI}
+    volumes:
+      # Bind mount source code for hot reloading
+      - .:/app
+      - /app/node_modules  # Anonymous volume to prevent overwriting node_modules
+      - /app/dist          # Anonymous volume for build output
+    networks:
+      - openspot-network
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  nginx-dev:
+    image: nginx:alpine
+    container_name: open-spot-nginx-dev
+    ports:
+      - "80:80"   # nginx proxy
+    volumes:
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend-dev
+    networks:
+      - openspot-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend service for development (uncomment when available)
+  # backend-dev:
+  #   image: open-spot-backend:dev
+  #   container_name: open-spot-backend-dev
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DATABASE_URL=${DATABASE_URL:-postgresql://dev:dev@db-dev:5432/openspot_dev}
+  #   volumes:
+  #     - ../backend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - dev-network
+  #   restart: unless-stopped
+
+  # Development database (uncomment when needed)
+  # db-dev:
+  #   image: postgres:15-alpine
+  #   container_name: open-spot-db-dev
+  #   environment:
+  #     - POSTGRES_DB=openspot_dev
+  #     - POSTGRES_USER=dev
+  #     - POSTGRES_PASSWORD=dev
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_dev_data:/var/lib/postgresql/data
+  #   networks:
+  #     - dev-network
+
+networks:
+  openspot-network:
+    external: true
+    name: open_spot_openspot-network
+
+volumes:
+  postgres_dev_data:
+    driver: local
+    name: open-spot-postgres-dev-data

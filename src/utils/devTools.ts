@@ -144,7 +144,7 @@ class DevTools {
   }
 
   async testApiConnection(): Promise<void> {
-    const baseUrl = import.meta.env.API_BASE_URL;
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
     logger.info('Testing API connection', { baseUrl });
 
     try {

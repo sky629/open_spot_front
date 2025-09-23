@@ -1,6 +1,6 @@
 // Map Page Component with New Layout
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, CategoryFilter } from '../components';
@@ -126,7 +126,6 @@ export const MapPage: React.FC = () => {
         {/* 메인 콘텐츠 영역 */}
         <MainContent>
           <ContentArea>
-            {console.log('🚀 MapPage - about to render MapContainer')}
             <MapContainer onLocationSelect={handleLocationSelect} />
 
             <MapControls>

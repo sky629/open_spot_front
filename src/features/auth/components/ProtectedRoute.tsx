@@ -1,24 +1,19 @@
 // Protected Route Component
 
 import React, { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { useIsAuthenticated, useAuthLoading } from '../../../stores/auth';
+import { useAuthLoading } from '../../../stores/auth';
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  redirectTo?: string;
   fallback?: ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  redirectTo = '/login',
   fallback
 }) => {
-  const isAuthenticated = useIsAuthenticated();
   const isLoading = useAuthLoading();
-  const location = useLocation();
 
   // 로딩 중일 때 표시할 컴포넌트
   if (isLoading) {

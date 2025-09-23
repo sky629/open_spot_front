@@ -4,6 +4,7 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import type { AuthState } from './types';
 import type { User } from '../../types';
+import type { LoginError } from '../../features/auth/types';
 import { logger } from '../../utils/logger';
 
 // 의존성 주입을 위한 서비스 참조
@@ -38,6 +39,7 @@ const initialState = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  loginError: null,
   isServiceReady: false,
 };
 
@@ -103,6 +105,30 @@ export const useAuthStore = create<AuthState>()(
           }
         },
 
+        setLoginError: (error: LoginError | null) => {
+          set((state) => {
+            // 같은 에러이면 업데이트하지 않음
+            if (state.loginError === error) {
+              return state;
+            }
+
+            return {
+              ...state,
+              loginError: error,
+              isLoading: error ? false : state.isLoading,
+            };
+          });
+
+          if (error) {
+            logger.error('Login error in store', {
+              code: error.code,
+              message: error.message,
+              details: error.details,
+              timestamp: error.timestamp
+            });
+          }
+        },
+
         clearError: () => {
           set((state) => {
             // 이미 에러가 없으면 업데이트하지 않음
@@ -113,6 +139,20 @@ export const useAuthStore = create<AuthState>()(
             return {
               ...state,
               error: null,
+            };
+          });
+        },
+
+        clearLoginError: () => {
+          set((state) => {
+            // 이미 로그인 에러가 없으면 업데이트하지 않음
+            if (!state.loginError) {
+              return state;
+            }
+
+            return {
+              ...state,
+              loginError: null,
             };
           });
         },

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary, LoadingSpinner } from './shared/components';
-import { LoginPage, ProtectedRoute } from './features/auth';
+import { LoginPage, LoginErrorPage, ProtectedRoute } from './features/auth';
 import { MapPage } from './features/map';
 import { initializeApplication, cleanupApplication } from './setup';
 import { logger } from './utils/logger';
@@ -146,6 +146,7 @@ export const NewApp: React.FC = () => {
           <Routes>
             {/* 공개 경로들 */}
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/login/error" element={<LoginErrorPage />} />
 
 
             {/* 보호된 경로들 */}

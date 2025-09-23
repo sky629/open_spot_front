@@ -1,0 +1,29 @@
+# Development Dockerfile for hot-reloading
+
+FROM node:20-alpine AS development
+
+# Set working directory
+WORKDIR /app
+
+# Install development dependencies for native modules
+RUN apk add --no-cache python3 make g++
+
+# Copy package files
+COPY package.json yarn.lock ./
+
+# Install all dependencies (including dev dependencies)
+RUN yarn install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Expose Vite dev server port
+EXPOSE 3000
+
+# Set environment variables for development
+ENV NODE_ENV=development
+ENV CHOKIDAR_USEPOLLING=true
+ENV VITE_HMR_HOST=0.0.0.0
+
+# Start development server with host binding
+CMD ["yarn", "dev", "--host", "0.0.0.0", "--port", "3000"]

@@ -5,12 +5,24 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc --noEmit && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "kill:servers": "./scripts/kill-servers.sh",
-    "restart": "./scripts/kill-servers.sh && yarn dev"
+    "restart": "./scripts/kill-servers.sh && yarn dev",
+    "docker:build": "docker build -t open-spot-front .",
+    "docker:run": "docker run -p 80:80 open-spot-front",
+    "docker:dev": "docker-compose -f docker-compose.dev.yml up -d",
+    "docker:prod": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "docker:stop:dev": "docker-compose -f docker-compose.dev.yml down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:logs:dev": "docker-compose -f docker-compose.dev.yml logs -f",
+    "deploy": "./deploy.sh prod",
+    "deploy:dev": "./deploy.sh dev",
+    "deploy:status": "./deploy.sh prod status",
+    "deploy:clean": "./deploy.sh prod clean"
   },
   "dependencies": {
     "axios": "^1.6.0",
