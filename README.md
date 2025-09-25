@@ -55,10 +55,10 @@ cp .env.example .env
 `.env` 파일 내용:
 ```env
 # 네이버 지도 API 키 (필수)
-NAVER_MAP_CLIENT_ID=your_naver_map_client_id_here
+VITE_NAVER_MAP_CLIENT_ID=your_naver_map_client_id_here
 
 # 백엔드 API URL
-API_BASE_URL=http://localhost:8000
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
 #### 네이버 클라우드 플랫폼 Maps API 키 발급 방법:
@@ -72,7 +72,7 @@ API_BASE_URL=http://localhost:8000
    - 서비스 URL: 개발/배포 도메인 등록
    - **Web Dynamic Map** 서비스 선택
 5. 생성된 **인증 정보**에서 **Key ID**를 복사
-6. 발급받은 **Key ID**를 `NAVER_MAP_CLIENT_ID`에 설정
+6. 발급받은 **Key ID**를 `VITE_NAVER_MAP_CLIENT_ID`에 설정
 
 ### 4. 개발 서버 실행
 

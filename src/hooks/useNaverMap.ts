@@ -68,7 +68,7 @@ export const useNaverMap = ({
       const timeoutId = setTimeout(initializeMap, 100);
       return () => clearTimeout(timeoutId);
     }
-  }, [center.lat, center.lng, zoom, map]);
+  }, [center.lat, center.lng, zoom, map, options]);
 
   const setCenter = (newCenter: NaverLatLng) => {
     if (map) {

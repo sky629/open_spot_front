@@ -53,7 +53,7 @@ export const TokenHandler: React.FC = () => {
     };
 
     handleTokenFromUrl();
-  }, [location.search, navigate, setUserFromToken]);
+  }, [location.search, location.pathname, navigate, setUserFromToken]);
 
   return null; // 이 컴포넌트는 UI를 렌더링하지 않음
 };

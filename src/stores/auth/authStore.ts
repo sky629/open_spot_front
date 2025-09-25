@@ -5,13 +5,14 @@ import { devtools, persist } from 'zustand/middleware';
 import type { AuthState } from './types';
 import type { User } from '../../types';
 import type { LoginError } from '../../features/auth/types';
+import type { IAuthService } from '../../core/interfaces/IAuthService';
 import { logger } from '../../utils/logger';
 
 // 의존성 주입을 위한 서비스 참조
-let authService: any = null;
+let authService: IAuthService | null = null;
 let serviceRegistered = false;
 
-export const setAuthServiceForStore = (service: any) => {
+export const setAuthServiceForStore = (service: IAuthService) => {
   // 중복 등록 방지
   if (serviceRegistered && authService === service) {
     logger.debug('Auth service already registered, skipping');

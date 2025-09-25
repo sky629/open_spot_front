@@ -3,9 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, CategoryFilter } from '../components';
+import { MapContainer } from '../components';
 import { UserProfile } from '../../auth/components';
-import { useUser } from '../../../stores/auth'; 
+import { CategoryDropdown } from '../../../components/common/CategoryDropdown';
+import { GroupSection } from '../../../components/Sidebar/GroupSection';
+import { LocationSection } from '../../../components/Sidebar/LocationSection';
+import { useUser } from '../../../stores/auth';
 import { useSelectedLocation } from '../../../stores/location';
 import { logger } from '../../../utils/logger';
 import { colors, media, transitions, shadows } from '../../../styles';
@@ -80,6 +83,7 @@ export const MapPage: React.FC = () => {
         </NavLeft>
 
         <NavRight>
+          <CategoryDropdown />
           <UserProfile />
         </NavRight>
       </TopNavBar>
@@ -96,8 +100,13 @@ export const MapPage: React.FC = () => {
           </SidebarHeader>
 
           <SidebarContent>
-            {/* 카테고리 필터 */}
-            <CategoryFilter />
+            {/* 그룹 관리 섹션 */}
+            <GroupSection />
+
+            <Divider />
+
+            {/* 장소 리스트 섹션 */}
+            <LocationSection />
 
             {/* 선택된 위치 정보 */}
             {selectedLocation && (
@@ -454,19 +463,25 @@ const AppTitle = styled.h1`
 const SidebarContent = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 1.25rem;
+  padding: 0;
   display: flex;
   flex-direction: column;
   background-color: #fafafa;
 `;
 
+const Divider = styled.div`
+  height: 1px;
+  background-color: ${colors.border.secondary};
+  margin: 0.5rem 1rem;
+`;
+
 const LocationDetails = styled.div`
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 2px solid #3182ce;
-  margin-top: 1rem;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: ${colors.shadow.sm};
+  border: 1px solid ${colors.border.purple};
+  margin: 1rem;
 `;
 
 const LocationTitle = styled.h3`

@@ -19,6 +19,11 @@ export const LoginErrorPage: React.FC = () => {
   const [error, setError] = useState<LoginError | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
+  const handleRetry = () => {
+    logger.userAction('User clicked retry after login error', { errorCode: error?.code });
+    navigate('/login', { replace: true });
+  };
+
   useEffect(() => {
     const code = searchParams.get('code');
     const msg = searchParams.get('msg');
@@ -63,12 +68,7 @@ export const LoginErrorPage: React.FC = () => {
         handleRetry();
       }, delay);
     }
-  }, [searchParams, navigate, retryCount]);
-
-  const handleRetry = () => {
-    logger.userAction('User clicked retry after login error', { errorCode: error?.code });
-    navigate('/login', { replace: true });
-  };
+  }, [searchParams, navigate, retryCount, handleRetry, error?.code]);
 
   const handleSupport = () => {
     logger.userAction('User requested support after login error', { errorCode: error?.code });

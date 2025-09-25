@@ -12,9 +12,9 @@ console.log('📋 Analyzing codebase for potential login page errors...\n');
 // Check 1: Environment Variables
 console.log('1️⃣ Environment Variables Check:');
 const envVars = {
-  'API_BASE_URL': process.env.API_BASE_URL || 'Not set',
-  'GOOGLE_CLIENT_ID': process.env.GOOGLE_CLIENT_ID || 'Not set',
-  'NAVER_MAP_CLIENT_ID': process.env.NAVER_MAP_CLIENT_ID || 'Not set'
+  'VITE_API_BASE_URL': process.env.VITE_API_BASE_URL || 'Not set',
+  'VITE_GOOGLE_CLIENT_ID': process.env.VITE_GOOGLE_CLIENT_ID || 'Not set',
+  'VITE_NAVER_MAP_CLIENT_ID': process.env.VITE_NAVER_MAP_CLIENT_ID || 'Not set'
 };
 
 Object.entries(envVars).forEach(([key, value]) => {

@@ -10,12 +10,12 @@ interface LoginFormProps {
   className?: string;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, className }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Zustand 스토어에서 필요한 값들만 선택적으로 구독
   const loginData = useLogin();
-  const { isLoading, error, isServiceReady, loginWithGoogle, clearError } = loginData;
+  const { isLoading, error, isServiceReady, clearError } = loginData;
 
   // 핸들러를 useCallback으로 메모이제이션하여 불필요한 re-render 방지
   const handleGoogleLogin = useCallback(async () => {
@@ -45,7 +45,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, className }) =>
     } finally {
       setIsGoogleLoading(false);
     }
-  }, [isServiceReady, isLoading, isGoogleLoading, clearError, loginWithGoogle, onSuccess]);
+  }, [isServiceReady, isLoading, isGoogleLoading, clearError]);
 
   // 버튼 상태를 useMemo로 계산하여 불필요한 계산 방지
   const buttonState = useMemo(() => {

@@ -134,7 +134,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         }
       };
     }
-  }, [map]); // debouncedBoundsChanged 의존성 제거
+  }, [map, debouncedBoundsChanged]);
 
   return (
     <MapWrapper>

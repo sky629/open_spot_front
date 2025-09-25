@@ -48,16 +48,16 @@ yarn restart
 Copy `.env.example` to `.env` and configure:
 ```bash
 # Naver Cloud Platform Maps API Key ID (required)
-NAVER_MAP_CLIENT_ID=your_ncp_key_id_here
+VITE_NAVER_MAP_CLIENT_ID=your_ncp_key_id_here
 
 # Backend API URL (Spring Boot Gateway)
-API_BASE_URL=http://localhost:8080
+VITE_API_BASE_URL=http://localhost:8080
 
 # Google OAuth Client ID (required for authentication)
-GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
 
 # OAuth Redirect URI
-OAUTH_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
+VITE_OAUTH_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
 ```
 
 **Important**: As of 2025, legacy AI NAVER API is deprecated. Use Naver Cloud Platform Maps API.

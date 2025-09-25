@@ -44,7 +44,7 @@ export const useUserProfile = () => {
       email: user.email,
       profileImageUrl: user.profileImageUrl,
     };
-  }, [user?.id, user?.name, user?.email, user?.profileImageUrl]);
+  }, [user]);
 };
 
 /**
