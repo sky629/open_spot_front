@@ -26,7 +26,7 @@ export class NaverMapLoader implements IMapLoader {
         return;
       }
 
-      const clientId = __NAVER_MAP_CLIENT_ID__;
+      const clientId = __VITE_NAVER_MAP_CLIENT_ID__;
       logger.info('🗺️ Naver Maps Client ID:', clientId);
 
       if (!clientId) {

@@ -30,8 +30,8 @@ console.log('');
 
 console.log('🔥 JavaScript Errors to Look For:');
 console.log('  • "Cannot read property" or "Cannot read properties of undefined"');
-console.log('  • "__GOOGLE_CLIENT_ID__ is not defined"');
-console.log('  • "__API_BASE_URL__ is not defined"');
+console.log('  • "__VITE_GOOGLE_CLIENT_ID__ is not defined"');
+console.log('  • "__VITE_API_BASE_URL__ is not defined"');
 console.log('  • "Failed to resolve module"');
 console.log('  • "Unexpected token" (syntax errors)');
 console.log('  • Service initialization errors');

@@ -34,7 +34,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, className }) =>
 
       // Google OAuth 리다이렉트 (/login으로 통합됨)
       const redirectUri = `${window.location.origin}/login`;
-      const googleOAuthUrl = `${__API_BASE_URL__}/api/v1/auth/google/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      const googleOAuthUrl = `${__VITE_API_BASE_URL__}/api/v1/auth/google/login?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
       logger.info('Redirecting to Google OAuth', { url: googleOAuthUrl, redirectUri });
       window.location.href = googleOAuthUrl;

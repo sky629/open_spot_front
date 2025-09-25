@@ -14,10 +14,10 @@ export default defineConfig(({ mode }) => {
       host: true,
     },
     define: {
-      __NAVER_MAP_CLIENT_ID__: JSON.stringify(env.VITE_NAVER_MAP_CLIENT_ID || ''),
-      __API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:8080'),
-      __GOOGLE_CLIENT_ID__: JSON.stringify(env.VITE_GOOGLE_CLIENT_ID || ''),
-      __OAUTH_REDIRECT_URI__: JSON.stringify(env.VITE_OAUTH_REDIRECT_URI || ''),
+      __VITE_NAVER_MAP_CLIENT_ID__: JSON.stringify(env.NAVER_MAP_CLIENT_ID || ''),
+      __VITE_API_BASE_URL__: JSON.stringify(env.API_BASE_URL || 'http://localhost:8080'),
+      __VITE_GOOGLE_CLIENT_ID__: JSON.stringify(env.GOOGLE_CLIENT_ID || ''),
+      __VITE_OAUTH_REDIRECT_URI__: JSON.stringify(env.OAUTH_REDIRECT_URI || ''),
     },
   }
 })

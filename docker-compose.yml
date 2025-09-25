@@ -1,7 +1,4 @@
 # Docker Compose for production deployment
-
-version: '3.8'
-
 services:
   frontend:
     build:
@@ -33,7 +30,7 @@ services:
 networks:
   openspot-network:
     external: true
-    name: openspot-network
+    name: open_spot_openspot-network
 
 volumes:
   nginx_logs:
