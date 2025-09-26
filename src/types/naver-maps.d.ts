@@ -2,7 +2,21 @@
 
 declare global {
   interface Window {
-    naver: any;
+    naver: {
+      maps: {
+        Map: new (element: HTMLElement, options: NaverMapOptions) => NaverMap;
+        LatLng: new (lat: number, lng: number) => NaverLatLng;
+        Marker: new (options: NaverMarkerOptions) => NaverMarker;
+        InfoWindow: new (options: unknown) => unknown;
+        Point: new (x: number, y: number) => { x: number; y: number };
+        Size: new (width: number, height: number) => { width: number; height: number };
+        Event: {
+          addListener: (target: object, eventType: string, listener: () => void) => object;
+          removeListener: (listener: object) => void;
+        };
+        MapTypeId: Record<string, string>;
+      };
+    };
   }
 }
 

@@ -1,6 +1,6 @@
 // Login Error Page Component
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { LoginError } from '../types';
@@ -19,10 +19,10 @@ export const LoginErrorPage: React.FC = () => {
   const [error, setError] = useState<LoginError | null>(null);
   const [retryCount, setRetryCount] = useState(0);
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     logger.userAction('User clicked retry after login error', { errorCode: error?.code });
     navigate('/login', { replace: true });
-  };
+  }, [error?.code, navigate]);
 
   useEffect(() => {
     const code = searchParams.get('code');

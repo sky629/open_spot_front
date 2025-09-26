@@ -6,14 +6,41 @@ import {
   InfoWindowOptions,
 } from '../../../../core/interfaces/IMapService';
 
+// Naver Maps InfoWindow 타입 정의
+interface NaverMapInfoWindow {
+  setContent: (content: string) => void;
+  open: (map: unknown, anchor: unknown) => void;
+  close: () => void;
+  setPosition: (position: { lat: number; lng: number }) => void;
+  getPosition: () => { lat: () => number; lng: () => number } | null;
+  setMap: (map: unknown | null) => void;
+  getMap: () => unknown | null;
+}
+
+interface NaverInfoWindowOptions {
+  content: string;
+  maxWidth?: number;
+  pixelOffset?: { x: number; y: number };
+  backgroundColor?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  borderRadius?: number;
+  zIndex?: number;
+  anchorSize?: { width: number; height: number };
+  anchorSkew?: boolean;
+  anchorColor?: string;
+  disableAnchor?: boolean;
+  disableAutoPan?: boolean;
+}
+
 export class NaverInfoWindow implements IInfoWindow {
-  private naverInfoWindow: any;
+  private naverInfoWindow: NaverMapInfoWindow;
   private options: InfoWindowOptions;
 
   constructor(options: InfoWindowOptions) {
     this.options = options;
 
-    const naverOptions: any = {
+    const naverOptions: NaverInfoWindowOptions = {
       content: options.content,
     };
 
@@ -22,10 +49,10 @@ export class NaverInfoWindow implements IInfoWindow {
     }
 
     if (options.pixelOffset) {
-      naverOptions.pixelOffset = new window.naver.maps.Point(
+      naverOptions.pixelOffset = new (window.naver.maps as { Point: new (x: number, y: number) => unknown }).Point(
         options.pixelOffset.x,
         options.pixelOffset.y
-      );
+      ) as { x: number; y: number };
     }
 
     if (options.zIndex) {
@@ -53,26 +80,28 @@ export class NaverInfoWindow implements IInfoWindow {
     }
 
     if (options.anchorSize) {
-      naverOptions.anchorSize = new window.naver.maps.Size(
+      naverOptions.anchorSize = new (window.naver.maps as { Size: new (width: number, height: number) => unknown }).Size(
         options.anchorSize.width,
         options.anchorSize.height
-      );
+      ) as { width: number; height: number };
     }
 
     if (options.anchorColor) {
       naverOptions.anchorColor = options.anchorColor;
     }
 
-    this.naverInfoWindow = new window.naver.maps.InfoWindow(naverOptions);
+    this.naverInfoWindow = new (window.naver.maps as { InfoWindow: new (options: NaverInfoWindowOptions) => NaverMapInfoWindow }).InfoWindow(naverOptions);
   }
 
   open(map: IMapService, marker?: IMapMarker): void {
     if (marker && 'getNaverMarker' in marker) {
       // Open info window on marker
-      this.naverInfoWindow.open((marker as any).getNaverMarker().getMap(), (marker as any).getNaverMarker());
+      const naverMarker = (marker as { getNaverMarker: () => { getMap: () => unknown } }).getNaverMarker();
+      this.naverInfoWindow.open(naverMarker.getMap(), naverMarker);
     } else if (map && 'getNaverMap' in map) {
       // Open info window on map
-      this.naverInfoWindow.open((map as any).getNaverMap());
+      const naverMap = (map as { getNaverMap: () => unknown }).getNaverMap();
+      this.naverInfoWindow.open(naverMap, null as unknown);
     }
   }
 
@@ -109,7 +138,7 @@ export class NaverInfoWindow implements IInfoWindow {
   }
 
   // Internal method to access the underlying Naver info window
-  getNaverInfoWindow(): any {
+  getNaverInfoWindow(): NaverMapInfoWindow {
     return this.naverInfoWindow;
   }
 }

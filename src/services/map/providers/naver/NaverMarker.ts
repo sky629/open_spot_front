@@ -7,13 +7,26 @@ import {
 } from '../../../../core/interfaces/IMapService';
 import { NaverInfoWindow } from './NaverInfoWindow';
 
+// Naver Maps API 마커 타입 (최소한의 인터페이스 정의)
+interface NaverMapMarker {
+  setPosition: (position: { lat: number; lng: number }) => void;
+  getPosition: () => { lat: () => number; lng: () => number };
+  setMap: (map: unknown | null) => void;
+  setIcon: (icon: unknown) => void;
+  setVisible: (visible: boolean) => void;
+  getVisible: () => boolean;
+  addListener: (event: string, callback: () => void) => void;
+  removeListener: (event: string, callback: () => void) => void;
+  destroy?: () => void;
+}
+
 export class NaverMarker implements IMapMarker {
-  private naverMarker: any;
+  private naverMarker: NaverMapMarker;
   private id: string;
   private infoWindow: NaverInfoWindow | null = null;
   private listeners: Map<string, ((event: MapEvent) => void)[]> = new Map();
 
-  constructor(naverMarker: any, id: string) {
+  constructor(naverMarker: NaverMapMarker, id: string) {
     this.naverMarker = naverMarker;
     this.id = id;
   }
@@ -79,7 +92,7 @@ export class NaverMarker implements IMapMarker {
     }
 
     this.infoWindow = new NaverInfoWindow(options);
-    this.infoWindow.open(null as any, this); // Map service will be passed properly
+    this.infoWindow.open(null as unknown, this); // Map service will be passed properly
   }
 
   closeInfoWindow(): void {
@@ -131,7 +144,7 @@ export class NaverMarker implements IMapMarker {
   }
 
   // Internal method to access the underlying Naver marker
-  getNaverMarker(): any {
+  getNaverMarker(): NaverMapMarker {
     return this.naverMarker;
   }
 }

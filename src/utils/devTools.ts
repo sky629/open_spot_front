@@ -8,8 +8,12 @@ interface DebugInfo {
   viewport: { width: number; height: number };
   timestamp: string;
   performance: {
-    memory?: any;
-    navigation?: any;
+    memory?: {
+      usedJSHeapSize?: number;
+      totalJSHeapSize?: number;
+      jsHeapSizeLimit?: number;
+    };
+    navigation?: PerformanceNavigationTiming;
   };
 }
 
@@ -29,7 +33,17 @@ class DevTools {
     if (typeof window === 'undefined') return;
 
     // 전역 디버그 함수 등록
-    (window as any).debug = {
+    (window as typeof window & {
+      debug: {
+        logger: typeof logger;
+        getDebugInfo: () => DebugInfo;
+        exportLogs: () => void;
+        clearLogs: () => void;
+        testApiConnection: () => Promise<void>;
+        inspectComponent: (element: HTMLElement) => void;
+        measurePerformance: <T>(operation: string, fn: () => T) => T;
+      };
+    }).debug = {
       logger: logger,
       getDebugInfo: this.getDebugInfo.bind(this),
       exportLogs: this.exportLogs.bind(this),
@@ -100,8 +114,8 @@ class DevTools {
 
     // 성능 정보 수집
     if ('performance' in window) {
-      if ((performance as any).memory) {
-        info.performance.memory = (performance as any).memory;
+      if ((performance as Performance & { memory?: { usedJSHeapSize?: number; totalJSHeapSize?: number; jsHeapSizeLimit?: number } }).memory) {
+        info.performance.memory = (performance as Performance & { memory?: { usedJSHeapSize?: number; totalJSHeapSize?: number; jsHeapSizeLimit?: number } }).memory;
       }
 
       if (performance.getEntriesByType) {
@@ -189,7 +203,7 @@ class DevTools {
     logger.debug('Component inspection', info);
 
     // 브라우저 개발자 도구에서 쉽게 접근할 수 있도록
-    (window as any).$inspected = element;
+    (window as typeof window & { $inspected: HTMLElement }).$inspected = element;
     logger.info('Element stored in window.$inspected');
   }
 
@@ -206,7 +220,7 @@ class DevTools {
   // React DevTools 설치 체크
   checkReactDevTools(): void {
     if (typeof window !== 'undefined') {
-      const hasReactDevTools = !!(window as any).__REACT_DEVTOOLS_GLOBAL_HOOK__;
+      const hasReactDevTools = !!(window as typeof window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__REACT_DEVTOOLS_GLOBAL_HOOK__;
 
       if (hasReactDevTools) {
         // logger.info('React DevTools detected');

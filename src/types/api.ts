@@ -99,7 +99,7 @@ export interface Report {
   radius: number;
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
   score?: string; // A-F 등급
-  analysisData?: any;
+  analysisData?: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }

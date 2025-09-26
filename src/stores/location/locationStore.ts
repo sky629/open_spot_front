@@ -4,16 +4,17 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { LocationState } from './types';
 import type { LocationResponse, GetLocationsParams } from '../../types';
+import type { ILocationService } from '../../core/interfaces';
 import { logger } from '../../utils/logger';
 
 // 의존성 주입을 위한 서비스 참조
-let locationService: any = null;
+let locationService: ILocationService | null = null;
 
 // 중복 호출 방지를 위한 플래그들
 let isFetchingLocations = false;
 let isFetchingByBounds = false;
 
-export const setLocationServiceForStore = (service: any) => {
+export const setLocationServiceForStore = (service: ILocationService) => {
   locationService = service;
 };
 

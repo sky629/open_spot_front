@@ -6,9 +6,10 @@ import { useLocations, useLocationStore } from '../../../stores/location';
 import { LocationMarker } from './LocationMarker';
 import { useNaverMap } from '../../../hooks/useNaverMap';
 import { logger } from '../../../utils/logger';
+import type { LocationResponse } from '../../../types';
 
 interface MapContainerProps {
-  onLocationSelect?: (location: any) => void;
+  onLocationSelect?: (location: LocationResponse) => void;
   className?: string;
 }
 
@@ -95,8 +96,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
                 northEast = bounds.getMax();
                 southWest = bounds.getMin();
               } else {
-                northEast = (bounds as any).northEast;
-                southWest = (bounds as any).southWest;
+                // Fallback for unknown bounds structure
+                northEast = (bounds as unknown as Record<string, unknown>).northEast as { lat: number; lng: number };
+                southWest = (bounds as unknown as Record<string, unknown>).southWest as { lat: number; lng: number };
               }
 
               if (northEast && southWest) {
@@ -144,8 +146,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
               northEast = bounds.getMax();
               southWest = bounds.getMin();
             } else {
-              northEast = (bounds as any).northEast;
-              southWest = (bounds as any).southWest;
+              // Fallback for unknown bounds structure
+              northEast = (bounds as unknown as Record<string, unknown>).northEast as { lat: number; lng: number };
+              southWest = (bounds as unknown as Record<string, unknown>).southWest as { lat: number; lng: number };
             }
 
             if (northEast && southWest) {
@@ -179,7 +182,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     };
   }, [map, isLoaded, fetchLocationsWithBounds]);
 
-  const handleLocationClick = (location: any) => {
+  const handleLocationClick = (location: LocationResponse) => {
     setSelectedLocation(location);
     onLocationSelect?.(location);
     logger.userAction('Location marker clicked', { locationId: location.id });

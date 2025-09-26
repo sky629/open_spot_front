@@ -2,6 +2,7 @@
 
 import { SecureAuthService } from '../../../services/SecureAuthService';
 import type { IAuthServiceFull } from '../../../core/interfaces';
+import type { User } from '../../../types';
 
 /**
  * Auth Feature용 서비스 구현체
@@ -105,8 +106,10 @@ export class AuthServiceImpl extends SecureAuthService implements IAuthServiceFu
     this.notifyAuthStateChange();
   }
 
-  setUser(user: any) {
-    super.setUser(user);
+  setUser(user: User | null) {
+    if (user) {
+      super.setUser(user);
+    }
     this.notifyAuthStateChange();
   }
 }

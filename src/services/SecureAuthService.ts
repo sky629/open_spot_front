@@ -1,6 +1,6 @@
 // Secure Authentication Service with HttpOnly Cookie Support
 
-import type { IAuthServiceFull } from '../core/interfaces';
+import type { IAuthServiceFull, IApiClient } from '../core/interfaces';
 import type { User, GoogleLoginResponse } from '../types';
 import { SecureCookieService } from './SecureCookieService';
 import { API_ENDPOINTS } from '../constants';
@@ -8,7 +8,7 @@ import { logger } from '../utils/logger';
 
 export class SecureAuthService implements IAuthServiceFull {
   private cookieService: SecureCookieService;
-  private apiClient: any; // IApiClient 타입을 나중에 주입받음
+  private apiClient: IApiClient | null = null; // IApiClient 타입을 나중에 주입받음
 
   constructor() {
     this.cookieService = new SecureCookieService();
@@ -18,7 +18,7 @@ export class SecureAuthService implements IAuthServiceFull {
    * API 클라이언트 주입 (순환 참조 방지)
    * @param apiClient - API 클라이언트 인스턴스
    */
-  setApiClient(apiClient: any): void {
+  setApiClient(apiClient: IApiClient): void {
     this.apiClient = apiClient;
   }
 
@@ -26,7 +26,11 @@ export class SecureAuthService implements IAuthServiceFull {
     try {
       logger.userAction('Google login with access token');
 
-      const response = await (this.apiClient as any).post(
+      if (!this.apiClient) {
+        throw new Error('API client not initialized');
+      }
+
+      const response = await this.apiClient.post<GoogleLoginResponse>(
         API_ENDPOINTS.AUTH.GOOGLE_LOGIN,
         { accessToken }
       );
@@ -53,7 +57,11 @@ export class SecureAuthService implements IAuthServiceFull {
     try {
       logger.userAction('Google login with authorization code');
 
-      const response = await (this.apiClient as any).post(
+      if (!this.apiClient) {
+        throw new Error('API client not initialized');
+      }
+
+      const response = await this.apiClient.post<GoogleLoginResponse>(
         API_ENDPOINTS.AUTH.GOOGLE_LOGIN_CODE,
         { code: authorizationCode }
       );
@@ -82,7 +90,11 @@ export class SecureAuthService implements IAuthServiceFull {
 
       // HttpOnly 쿠키 환경에서는 클라이언트에서 토큰을 직접 처리하지 않음
       // 대신 서버에서 토큰 검증 및 사용자 정보 반환을 요청
-      const response = await (this.apiClient as any).post(
+      if (!this.apiClient) {
+        throw new Error('API client not initialized');
+      }
+
+      const response = await this.apiClient.post<User>(
         API_ENDPOINTS.AUTH.VERIFY_TOKEN,
         { token }
       );
@@ -117,7 +129,11 @@ export class SecureAuthService implements IAuthServiceFull {
         throw new Error('User not authenticated');
       }
 
-      const response = await (this.apiClient as any).get(
+      if (!this.apiClient) {
+        throw new Error('API client not initialized');
+      }
+
+      const response = await this.apiClient.get<User>(
         API_ENDPOINTS.AUTH.USER_PROFILE
       );
 
@@ -144,7 +160,11 @@ export class SecureAuthService implements IAuthServiceFull {
   async refreshAccessToken(): Promise<string> {
     try {
       // HttpOnly 쿠키 환경에서는 서버에서 자동으로 토큰 갱신
-      const response = await (this.apiClient as any).post(
+      if (!this.apiClient) {
+        throw new Error('API client not initialized');
+      }
+
+      const response = await this.apiClient.post<{ token: string }>(
         API_ENDPOINTS.AUTH.TOKEN_REFRESH
       );
 
@@ -165,7 +185,9 @@ export class SecureAuthService implements IAuthServiceFull {
     try {
       // 서버에 로그아웃 요청 (HttpOnly 쿠키 제거)
       try {
-        await this.apiClient.post(API_ENDPOINTS.AUTH.LOGOUT);
+        if (this.apiClient) {
+          await this.apiClient.post(API_ENDPOINTS.AUTH.LOGOUT);
+        }
         logger.userAction('Server logout successful');
       } catch (error) {
         logger.warn('Server logout failed, proceeding with local logout', error);

@@ -7,7 +7,7 @@ interface PerformanceMetrics {
   startTime: number;
   endTime?: number;
   duration?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface WebVitalsMetrics {
@@ -33,7 +33,7 @@ class PerformanceMonitor {
   }
 
   // 성능 측정 시작
-  mark(name: string, metadata?: Record<string, any>): void {
+  mark(name: string, metadata?: Record<string, unknown>): void {
     if (!this.isEnabled) return;
 
     const startTime = performance.now();
@@ -48,7 +48,7 @@ class PerformanceMonitor {
   }
 
   // 성능 측정 완료
-  measure(name: string, additionalMetadata?: Record<string, any>): number | null {
+  measure(name: string, additionalMetadata?: Record<string, unknown>): number | null {
     if (!this.isEnabled) return null;
 
     const metric = this.metrics.get(name);
@@ -79,7 +79,7 @@ class PerformanceMonitor {
   }
 
   // 함수 실행 성능 측정
-  measureFunction<T>(name: string, fn: () => T, metadata?: Record<string, any>): T {
+  measureFunction<T>(name: string, fn: () => T, metadata?: Record<string, unknown>): T {
     if (!this.isEnabled) return fn();
 
     this.mark(name, metadata);
@@ -93,7 +93,7 @@ class PerformanceMonitor {
   async measureAsync<T>(
     name: string,
     fn: () => Promise<T>,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<T> {
     if (!this.isEnabled) return fn();
 
@@ -183,7 +183,7 @@ class PerformanceMonitor {
       // Largest Contentful Paint 관찰
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1] as any;
+        const lastEntry = entries[entries.length - 1] as PerformanceEntry;
 
         if (lastEntry) {
           this.webVitals.LCP = lastEntry.startTime;
@@ -195,7 +195,7 @@ class PerformanceMonitor {
       // Cumulative Layout Shift 관찰
       const clsObserver = new PerformanceObserver((list) => {
         let clsValue = 0;
-        list.getEntries().forEach((entry: any) => {
+        list.getEntries().forEach((entry: PerformanceEntry & { value?: number; hadRecentInput?: boolean }) => {
           if (!entry.hadRecentInput) {
             clsValue += entry.value;
           }
@@ -210,8 +210,8 @@ class PerformanceMonitor {
 
       // First Input Delay 관찰
       const fidObserver = new PerformanceObserver((list) => {
-        list.getEntries().forEach((entry: any) => {
-          this.webVitals.FID = entry.processingStart - entry.startTime;
+        list.getEntries().forEach((entry: PerformanceEntry & { processingStart?: number }) => {
+          this.webVitals.FID = (entry.processingStart || 0) - entry.startTime;
           logger.performance('FID (First Input Delay)', this.webVitals.FID);
         });
       });
@@ -226,7 +226,7 @@ class PerformanceMonitor {
   private checkPerformanceThresholds(
     name: string,
     duration: number,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): void {
     const thresholds = {
       api: 2000,        // API 호출: 2초
@@ -255,12 +255,16 @@ class PerformanceMonitor {
   getMetrics(): {
     measurements: PerformanceMetrics[];
     webVitals: WebVitalsMetrics;
-    memory?: any;
+    memory?: {
+      usedJSHeapSize?: number;
+      totalJSHeapSize?: number;
+      jsHeapSizeLimit?: number;
+    };
   } {
     return {
       measurements: Array.from(this.metrics.values()),
       webVitals: this.webVitals,
-      memory: (performance as any).memory || undefined
+      memory: (performance as Performance & { memory?: { usedJSHeapSize?: number; totalJSHeapSize?: number; jsHeapSizeLimit?: number } }).memory || undefined
     };
   }
 
@@ -296,5 +300,5 @@ export const performanceMonitor = new PerformanceMonitor();
 
 // 개발 모드에서 전역 접근 가능하도록 설정
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (window as any).performanceMonitor = performanceMonitor;
+  (window as typeof window & { performanceMonitor: PerformanceMonitor }).performanceMonitor = performanceMonitor;
 }

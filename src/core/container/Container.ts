@@ -2,7 +2,7 @@
 
 import type { IContainer } from '../interfaces/IContainer';
 
-interface ServiceRegistration<T = any> {
+interface ServiceRegistration<T = unknown> {
   implementation: T | (() => T);
   singleton: boolean;
   instance?: T;

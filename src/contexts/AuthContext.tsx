@@ -1,6 +1,6 @@
 // 인증 상태 관리를 위한 React Context
 
-import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
+import React, { createContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
 import type { User } from '../types';
@@ -192,13 +192,4 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-// AuthContext 사용을 위한 커스텀 훅
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-
-  return context;
-};
+// AuthContext와 타입을 export (useAuth 훅은 별도 파일로 분리됨)

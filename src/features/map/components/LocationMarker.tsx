@@ -1,11 +1,24 @@
 // Location Marker Component
 
 import { useEffect, useRef } from 'react';
-import type { LocationResponse } from '../../../types';
+import type { LocationResponse, NaverMap } from '../../../types';
 import { MAP_CATEGORIES, MARKER_ICONS } from '../../../constants/map';
 
+// Naver Maps API 타입 정의 (전역 타입 사용)
+type NaverMarker = {
+  setMap: (map: NaverMap | null) => void;
+  getPosition: () => { lat: () => number; lng: () => number };
+  setTitle: (title: string) => void;
+  addListener: (event: string, callback: () => void) => void;
+};
+type NaverInfoWindow = {
+  setContent: (content: string) => void;
+  open: (map: NaverMap, marker: NaverMarker) => void;
+  close: () => void;
+};
+
 interface LocationMarkerProps {
-  map: any; // window.naver.maps.Map
+  map: NaverMap;
   location: LocationResponse;
   onClick?: (location: LocationResponse) => void;
 }
@@ -15,8 +28,8 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
   location,
   onClick
 }) => {
-  const markerRef = useRef<any>(null);
-  const infoWindowRef = useRef<any>(null);
+  const markerRef = useRef<NaverMarker | null>(null);
+  const infoWindowRef = useRef<NaverInfoWindow | null>(null);
 
   useEffect(() => {
     if (!map || !location.latitude || !location.longitude) return;
@@ -25,8 +38,8 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     const position = new window.naver.maps.LatLng(location.latitude, location.longitude);
 
     // 카테고리에 따른 아이콘 선택
-    const iconUrl = location.category && (MARKER_ICONS as any)[location.category]
-      ? (MARKER_ICONS as any)[location.category]
+    const iconUrl = location.category && location.category in MARKER_ICONS
+      ? MARKER_ICONS[location.category as keyof typeof MARKER_ICONS]
       : MARKER_ICONS.DEFAULT;
 
     const marker = new window.naver.maps.Marker({
@@ -109,8 +122,8 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
 
 // 정보창 HTML 생성 함수
 const createInfoWindowContent = (location: LocationResponse): string => {
-  const categoryName = location.category && (MAP_CATEGORIES as any)[location.category]
-    ? (MAP_CATEGORIES as any)[location.category]
+  const categoryName = location.category && location.category in MAP_CATEGORIES
+    ? MAP_CATEGORIES[location.category as keyof typeof MAP_CATEGORIES]
     : '기타';
 
   const imageSection = location.iconUrl

@@ -1,7 +1,7 @@
 // 위치 정보 관리 커스텀 훅
 
 import { useState, useEffect, useCallback } from 'react';
-import { LocationService } from '../services';
+import { getLocationService } from '../setup/serviceRegistration';
 import type { LocationResponse, GetLocationsParams } from '../types';
 
 interface UseLocationsState {
@@ -35,7 +35,8 @@ export const useLocations = (params?: GetLocationsParams) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const locations = await LocationService.getLocations(searchParams || params);
+      const locationService = getLocationService();
+      const locations = await locationService.getLocations(searchParams || params);
       const locationCounts = calculateLocationCounts(locations);
       setState({
         locations,
@@ -64,7 +65,8 @@ export const useLocations = (params?: GetLocationsParams) => {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const locations = await LocationService.getLocationsByBounds(
+      const locationService = getLocationService();
+      const locations = await locationService.getLocationsByBounds(
         northEast,
         southWest,
         category

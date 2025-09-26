@@ -12,6 +12,7 @@ import { useUser } from '../../../stores/auth';
 import { useSelectedLocation } from '../../../stores/location';
 import { logger } from '../../../utils/logger';
 import { colors, media, transitions, shadows } from '../../../styles';
+import type { LocationResponse } from '../../../types';
 
 export const MapPage: React.FC = () => {
   console.log('🚀 MapPage component rendering...');
@@ -33,7 +34,7 @@ export const MapPage: React.FC = () => {
 
   console.log('🚀 MapPage - selectedLocation:', selectedLocation);
 
-  const handleLocationSelect = (location: any) => {
+  const handleLocationSelect = (location: LocationResponse) => {
     logger.userAction('Location selected from map', { locationId: location.id });
   };
 

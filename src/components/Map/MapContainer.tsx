@@ -134,7 +134,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
         }
       };
     }
-  }, [map, debouncedBoundsChanged]);
+  }, [map, debouncedBoundsChanged, onBoundsChanged]);
 
   return (
     <MapWrapper>

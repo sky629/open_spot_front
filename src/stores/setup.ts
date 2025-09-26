@@ -2,7 +2,7 @@
 
 import { setAuthServiceForStore } from './auth';
 import { setLocationServiceForStore } from './location';
-import type { IAuthServiceFull } from '../core/interfaces';
+import type { IAuthServiceFull, ILocationService } from '../core/interfaces';
 
 /**
  * 모든 스토어에 서비스 의존성을 주입합니다
@@ -10,7 +10,7 @@ import type { IAuthServiceFull } from '../core/interfaces';
  */
 export const setupStores = (services: {
   authService: IAuthServiceFull;
-  locationService: any;
+  locationService: ILocationService;
 }) => {
   // Auth Store에 서비스 주입
   setAuthServiceForStore(services.authService);

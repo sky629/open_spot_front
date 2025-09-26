@@ -32,7 +32,7 @@ class ApiClient {
         if (authService && authService.getAuthHeader) {
           const authHeaders = authService.getAuthHeader();
           if (authHeaders && Object.keys(authHeaders).length > 0) {
-            config.headers = { ...config.headers, ...authHeaders } as any;
+            config.headers = { ...config.headers, ...authHeaders } as Record<string, string>;
           }
         } else {
           console.warn('⚠️ AuthService not available for API request');
@@ -134,7 +134,7 @@ class ApiClient {
     return response.data;
   }
 
-  async put<T>(url: string, data?: any): Promise<ApiResponse<T>> {
+  async put<T>(url: string, data?: unknown): Promise<ApiResponse<T>> {
     const response = await this.client.put<ApiResponse<T>>(url, data);
     return response.data;
   }

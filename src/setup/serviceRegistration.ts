@@ -9,6 +9,7 @@ import { MapServiceFactory } from '../services/map';
 import { API_CONFIG } from '../constants';
 import { setupStores } from '../stores/setup';
 import { logger } from '../utils/logger';
+import type { ILocationService, IAuthServiceFull, IApiClient } from '../core/interfaces';
 
 /**
  * 모든 서비스를 DI 컨테이너에 등록합니다
@@ -51,23 +52,25 @@ export const registerServices = (): void => {
       SERVICE_TOKENS.AUTH_SERVICE,
       () => {
         const authService = new AuthServiceImpl();
-        const apiClient = container.resolve(SERVICE_TOKENS.API_CLIENT);
+        const apiClient = container.resolve(SERVICE_TOKENS.API_CLIENT) as IApiClient;
 
         // 인증 서비스에 API 클라이언트 주입
         authService.setApiClient(apiClient);
 
         // API 클라이언트에 인증 서비스 주입 (순환 참조 해결)
-        (apiClient as any).setAuthService(authService);
+        if ('setAuthService' in apiClient) {
+          (apiClient as { setAuthService: (service: IAuthServiceFull) => void }).setAuthService(authService);
+        }
 
         return authService;
       },
       true // 싱글톤
     );
 
-    // 4. 위치 서비스 등록 (정적 클래스로 등록)
+    // 4. 위치 서비스 등록 (인스턴스로 등록)
     container.register(
       SERVICE_TOKENS.LOCATION_SERVICE,
-      () => LocationService,
+      () => new LocationService(),
       true // 싱글톤
     );
 
@@ -116,8 +119,8 @@ export const configureStores = (): void => {
   }
 
   try {
-    const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE) as any;
-    const locationService = container.resolve(SERVICE_TOKENS.LOCATION_SERVICE);
+    const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE) as IAuthServiceFull;
+    const locationService = container.resolve(SERVICE_TOKENS.LOCATION_SERVICE) as ILocationService;
 
     // 직접 동기적으로 실행하여 무한 루프 방지
     setupStores({
@@ -148,8 +151,8 @@ export const initializeApplication = async (): Promise<void> => {
     configureStores();
 
     // 3. 인증 서비스 자동 로그인 시도
-    const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE) as any;
-    const autoLoginSuccessful = await authService.attemptAutoLogin();
+    const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE) as IAuthServiceFull;
+    const autoLoginSuccessful = await (authService as IAuthServiceFull & { attemptAutoLogin?: () => Promise<boolean> }).attemptAutoLogin?.();
 
     if (autoLoginSuccessful) {
       // 자동 로그인 성공 시 Zustand 스토어에도 사용자 정보 설정
@@ -165,7 +168,7 @@ export const initializeApplication = async (): Promise<void> => {
     }
 
     // 4. 자동 토큰 갱신 설정
-    authService.setupAutoTokenRefresh();
+    (authService as IAuthServiceFull & { setupAutoTokenRefresh?: () => void }).setupAutoTokenRefresh?.();
 
     logger.info('🎉 Application initialized successfully');
 
@@ -201,6 +204,6 @@ export const cleanupApplication = (): void => {
  */
 export const getAuthService = () => container.resolve(SERVICE_TOKENS.AUTH_SERVICE);
 export const getApiClient = () => container.resolve(SERVICE_TOKENS.API_CLIENT);
-export const getLocationService = () => container.resolve(SERVICE_TOKENS.LOCATION_SERVICE);
+export const getLocationService = (): ILocationService => container.resolve(SERVICE_TOKENS.LOCATION_SERVICE) as ILocationService;
 export const getCookieService = () => container.resolve(SERVICE_TOKENS.COOKIE_SERVICE);
 export const getMapServiceFactory = () => container.resolve(SERVICE_TOKENS.MAP_SERVICE_FACTORY);

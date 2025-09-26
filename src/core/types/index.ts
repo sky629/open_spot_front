@@ -3,7 +3,7 @@
 /**
  * API 응답 기본 형식
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   message?: string;
   data?: T;

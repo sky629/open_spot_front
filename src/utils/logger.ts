@@ -80,7 +80,7 @@ class Logger {
     return 'unknown';
   }
 
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return;
 
     const source = this.config.enableSource ? this.getStackTrace() : undefined;
@@ -89,7 +89,7 @@ class Logger {
     console.log(formatted, ...args);
   }
 
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
 
     const source = this.config.enableSource ? this.getStackTrace() : undefined;
@@ -98,7 +98,7 @@ class Logger {
     console.info(formatted, ...args);
   }
 
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     if (!this.shouldLog(LogLevel.WARN)) return;
 
     const source = this.config.enableSource ? this.getStackTrace() : undefined;
@@ -107,7 +107,7 @@ class Logger {
     console.warn(formatted, ...args);
   }
 
-  error(message: string, error?: Error | any, ...args: any[]): void {
+  error(message: string, error?: Error | unknown, ...args: unknown[]): void {
     if (!this.shouldLog(LogLevel.ERROR)) return;
 
     const source = this.config.enableSource ? this.getStackTrace() : undefined;
@@ -121,11 +121,11 @@ class Logger {
   }
 
   // API 요청/응답 전용 로거
-  apiRequest(method: string, url: string, data?: any): void {
+  apiRequest(method: string, url: string, data?: unknown): void {
     this.debug(`🌐 API ${method.toUpperCase()} ${url}`, data);
   }
 
-  apiResponse(status: number, url: string, data?: any): void {
+  apiResponse(status: number, url: string, data?: unknown): void {
     if (status >= 400) {
       this.error(`🔴 API Error ${status} ${url}`, data);
     } else {
@@ -134,7 +134,7 @@ class Logger {
   }
 
   // 지도 이벤트 전용 로거
-  mapEvent(event: string, data?: any): void {
+  mapEvent(event: string, data?: unknown): void {
     this.debug(`🗺️ Map Event: ${event}`, data);
   }
 
@@ -148,12 +148,12 @@ class Logger {
   }
 
   // 사용자 액션 로거
-  userAction(action: string, data?: any): void {
+  userAction(action: string, data?: unknown): void {
     this.info(`👤 User Action: ${action}`, data);
   }
 
   // 컴포넌트 라이프사이클 로거
-  component(name: string, event: 'mount' | 'unmount' | 'update', data?: any): void {
+  component(name: string, event: 'mount' | 'unmount' | 'update', data?: unknown): void {
     this.debug(`🧩 Component ${name} ${event}`, data);
   }
 }
@@ -163,5 +163,5 @@ export const logger = new Logger();
 
 // 개발 모드에서만 window에 노출 (브라우저 콘솔에서 접근 가능)
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (window as any).logger = logger;
+  (window as typeof window & { logger: Logger }).logger = logger;
 }

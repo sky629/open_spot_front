@@ -3,6 +3,7 @@
 import { apiClient } from './api';
 import { API_ENDPOINTS } from '../constants';
 import { logger } from '../utils/logger';
+import type { ILocationService } from '../core/interfaces';
 import type {
   LocationResponse,
   CreateLocationRequest,
@@ -274,11 +275,11 @@ const MOCK_LOCATIONS: LocationResponse[] = [
   }
 ];
 
-export class LocationService {
+export class LocationService implements ILocationService {
   /**
    * 모든 위치 정보 조회
    */
-  static async getLocations(params?: GetLocationsParams): Promise<LocationResponse[]> {
+  async getLocations(params?: GetLocationsParams): Promise<LocationResponse[]> {
     // Mock-first 전략: 백엔드 엔드포인트가 구현되지 않았으므로 즉시 mock 데이터 반환
     logger.info(`Using mock data: ${MOCK_LOCATIONS.length} locations`);
 
@@ -323,7 +324,7 @@ export class LocationService {
   /**
    * 특정 위치 정보 조회
    */
-  static async getLocationById(id: string): Promise<LocationResponse> {
+  async getLocationById(id: string): Promise<LocationResponse> {
     try {
       const response = await apiClient.get<LocationResponse>(
         API_ENDPOINTS.LOCATION_BY_ID(id)
@@ -343,7 +344,7 @@ export class LocationService {
   /**
    * 새 위치 정보 생성
    */
-  static async createLocation(locationData: CreateLocationRequest): Promise<LocationResponse> {
+  async createLocation(locationData: CreateLocationRequest): Promise<LocationResponse> {
     try {
       const response = await apiClient.post<LocationResponse>(
         API_ENDPOINTS.LOCATIONS,
@@ -364,7 +365,7 @@ export class LocationService {
   /**
    * 위치 정보 업데이트
    */
-  static async updateLocation(locationData: UpdateLocationRequest): Promise<LocationResponse> {
+  async updateLocation(locationData: UpdateLocationRequest): Promise<LocationResponse> {
     try {
       const { id, ...updateData } = locationData;
       const response = await apiClient.put<LocationResponse>(
@@ -386,7 +387,7 @@ export class LocationService {
   /**
    * 위치 정보 삭제
    */
-  static async deleteLocation(id: string): Promise<void> {
+  async deleteLocation(id: string): Promise<void> {
     try {
       const response = await apiClient.delete<void>(
         API_ENDPOINTS.LOCATION_BY_ID(id)
@@ -404,7 +405,7 @@ export class LocationService {
   /**
    * 지도 범위 내 위치 정보 조회
    */
-  static async getLocationsByBounds(
+  async getLocationsByBounds(
     northEast: { lat: number; lng: number },
     southWest: { lat: number; lng: number },
     category?: string

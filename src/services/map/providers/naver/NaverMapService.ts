@@ -14,8 +14,49 @@ import { NaverMarker } from './NaverMarker';
 import { NaverInfoWindow } from './NaverInfoWindow';
 import { logger } from '../../../../utils/logger';
 
+// Naver Maps API 맵 타입 정의
+interface NaverMapInstance {
+  setCenter: (center: { lat: number; lng: number }) => void;
+  getCenter: () => { lat: () => number; lng: () => number };
+  setZoom: (zoom: number) => void;
+  getZoom: () => number;
+  getBounds: () => {
+    getMax: () => { lat: () => number; lng: () => number };
+    getMin: () => { lat: () => number; lng: () => number };
+    getNorthEast: () => { lat: () => number; lng: () => number };
+    getSouthWest: () => { lat: () => number; lng: () => number };
+  };
+  addListener: (event: string, callback: () => void) => void;
+  removeListener: (event: string, callback: () => void) => void;
+  destroy?: () => void;
+}
+
+interface NaverMapOptions {
+  center: { lat: number; lng: number };
+  zoom: number;
+  mapTypeId?: string;
+  mapDataControl?: boolean;
+  scaleControl?: boolean;
+  logoControl?: boolean;
+  mapTypeControl?: boolean;
+  zoomControl?: boolean;
+}
+
+interface NaverMarkerOptions {
+  position: { lat: number; lng: number };
+  map: NaverMapInstance;
+  title?: string;
+  icon?: string | { url: string };
+  animation?: string;
+  clickable?: boolean;
+  cursor?: string;
+  draggable?: boolean;
+  visible?: boolean;
+  zIndex?: number;
+}
+
 export class NaverMapService implements IMapService {
-  private naverMap: any;
+  private naverMap: NaverMapInstance;
   private markers: Map<string, NaverMarker> = new Map();
   private listeners: Map<string, ((event: MapEvent) => void)[]> = new Map();
   private markerIdCounter = 0;
@@ -26,7 +67,14 @@ export class NaverMapService implements IMapService {
     }
 
     try {
-      const naverOptions: any = {
+      const naverOptions: NaverMapOptions & {
+        draggable?: boolean;
+        scrollWheel?: boolean;
+        keyboardShortcuts?: boolean;
+        disableDoubleClickZoom?: boolean;
+        disableDoubleTapZoom?: boolean;
+        disableTwoFingerTapZoom?: boolean;
+      } = {
         center: new window.naver.maps.LatLng(options.center.lat, options.center.lng),
         zoom: options.zoom,
         mapTypeId: window.naver.maps.MapTypeId.NORMAL,
@@ -52,7 +100,7 @@ export class NaverMapService implements IMapService {
         naverOptions.maxZoom = options.maxZoom;
       }
 
-      this.naverMap = new window.naver.maps.Map(container, naverOptions);
+      this.naverMap = new (window.naver.maps as { Map: new (element: HTMLElement, options: unknown) => NaverMapInstance }).Map(container, naverOptions);
       logger.info('Naver Map service initialized successfully');
     } catch (error) {
       logger.error('Failed to initialize Naver Map service', error);
@@ -157,7 +205,7 @@ export class NaverMapService implements IMapService {
   createMarker(options: MarkerOptions): IMapMarker {
     const markerId = `marker_${++this.markerIdCounter}`;
 
-    const naverMarkerOptions: any = {
+    const naverMarkerOptions: NaverMarkerOptions = {
       position: new window.naver.maps.LatLng(options.position.lat, options.position.lng),
       map: this.naverMap,
       title: options.title,
@@ -275,7 +323,7 @@ export class NaverMapService implements IMapService {
   }
 
   // Internal method to access the underlying Naver map
-  getNaverMap(): any {
+  getNaverMap(): NaverMapInstance {
     return this.naverMap;
   }
 }

@@ -163,14 +163,14 @@ export const LoginPage: React.FC = () => {
   // 일반 로그인 상태 처리
   useEffect(() => {
     if (isAuthenticated && !isOAuthCallback) {
-      const from = (location.state as any)?.from?.pathname || '/map';
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/map';
       logger.info('User already authenticated, redirecting', { to: from });
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location, isOAuthCallback]);
 
   const handleLoginSuccess = () => {
-    const from = (location.state as any)?.from?.pathname || '/map';
+    const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/map';
     logger.userAction('Login successful, redirecting', { to: from });
     navigate(from, { replace: true });
   };

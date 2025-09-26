@@ -171,8 +171,9 @@ export class SecureApiClient implements IApiClient {
    * @param method - HTTP 메서드
    * @param url - 요청 URL
    */
-  private handleApiError(error: any, method: string, url: string): void {
-    const status = error.response?.status;
+  private handleApiError(error: unknown, method: string, url: string): void {
+    const axiosError = error as { response?: { status?: number; data?: unknown }; message?: string };
+    const status = axiosError.response?.status;
 
     // 특정 에러에 대한 추가 처리
     switch (status) {
@@ -186,10 +187,10 @@ export class SecureApiClient implements IApiClient {
         logger.warn(`Rate limit exceeded for ${method} ${url}`);
         break;
       case 500:
-        logger.error(`Server error for ${method} ${url}:`, error.response?.data);
+        logger.error(`Server error for ${method} ${url}:`, axiosError.response?.data);
         break;
       default:
-        logger.error(`API error for ${method} ${url}:`, error.message);
+        logger.error(`API error for ${method} ${url}:`, axiosError.message);
     }
   }
 
