@@ -5,7 +5,7 @@ import { authService } from '../services/authService';
 import { logger } from '../utils/logger';
 import type { User } from '../types';
 
-interface AuthContextType {
+export interface AuthContextType {
   // 상태
   user: User | null;
   isAuthenticated: boolean;
@@ -19,7 +19,7 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 interface AuthProviderProps {
   children: ReactNode;

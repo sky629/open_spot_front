@@ -56,7 +56,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
       zIndex: 100
     });
 
-    markerRef.current = marker;
+    markerRef.current = marker as any;
 
     // 정보창 생성
     const infoWindow = new window.naver.maps.InfoWindow({
@@ -69,15 +69,15 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
       backgroundColor: 'white'
     });
 
-    infoWindowRef.current = infoWindow;
+    infoWindowRef.current = infoWindow as any;
 
     // 마커 클릭 이벤트
     const clickListener = window.naver.maps.Event.addListener(marker, 'click', () => {
       // 다른 정보창들 닫기
-      if (infoWindow.getMap()) {
-        infoWindow.close();
+      if ((infoWindow as any).getMap()) {
+        (infoWindow as any).close();
       } else {
-        infoWindow.open(map, marker);
+        (infoWindow as any).open(map, marker);
       }
 
       onClick?.(location);
@@ -88,21 +88,21 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
       const closeButton = document.querySelector(`[data-location-id="${location.id}"] .close-btn`);
       if (closeButton) {
         closeButton.addEventListener('click', () => {
-          infoWindow.close();
+          (infoWindow as any).close();
         });
       }
     };
 
     // 정보창이 열릴 때 이벤트 설정
-    const domReadyListener = window.naver.maps.Event.addListener(infoWindow, 'domready', setupInfoWindowEvents);
+    const domReadyListener = window.naver.maps.Event.addListener(infoWindow as any, 'domready', setupInfoWindowEvents);
 
     // 클린업
     return () => {
       window.naver.maps.Event.removeListener(clickListener);
       window.naver.maps.Event.removeListener(domReadyListener);
 
-      if (infoWindow.getMap()) {
-        infoWindow.close();
+      if ((infoWindow as any).getMap()) {
+        (infoWindow as any).close();
       }
       marker.setMap(null);
     };
@@ -112,7 +112,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
   useEffect(() => {
     if (markerRef.current && location.latitude && location.longitude) {
       const newPosition = new window.naver.maps.LatLng(location.latitude, location.longitude);
-      markerRef.current.setPosition(newPosition);
+      (markerRef.current as any).setPosition(newPosition);
     }
   }, [location.latitude, location.longitude]);
 

@@ -90,18 +90,18 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
 
     // 마커 클릭 시 정보창 토글
     window.naver.maps.Event.addListener(marker, 'click', () => {
-      if (infoWindow.getMap()) {
-        infoWindow.close();
+      if ((infoWindow as any).getMap()) {
+        (infoWindow as any).close();
       } else {
-        infoWindow.open(map, marker);
+        (infoWindow as any).open(map, marker);
       }
     });
 
     // 정리 함수
     return () => {
       window.naver.maps.Event.removeListener(clickListener);
-      if (infoWindow.getMap()) {
-        infoWindow.close();
+      if ((infoWindow as any).getMap()) {
+        (infoWindow as any).close();
       }
       marker.setMap(null);
     };

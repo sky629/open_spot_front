@@ -1,7 +1,7 @@
 // URL 파라미터에서 JWT 토큰 처리하는 컴포넌트
 import React, { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { logger } from '../utils/logger';
 
 export const TokenHandler: React.FC = () => {
