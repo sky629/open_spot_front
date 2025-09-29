@@ -1,4 +1,5 @@
 // Location Marker Component
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useRef } from 'react';
 import type { LocationResponse, NaverMap } from '../../../types';

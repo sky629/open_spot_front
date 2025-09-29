@@ -22,68 +22,6 @@ export class SecureAuthService implements IAuthServiceFull {
     this.apiClient = apiClient;
   }
 
-  async loginWithGoogle(accessToken: string): Promise<GoogleLoginResponse> {
-    try {
-      logger.userAction('Google login with access token');
-
-      if (!this.apiClient) {
-        throw new Error('API client not initialized');
-      }
-
-      const response = await this.apiClient.post<GoogleLoginResponse>(
-        API_ENDPOINTS.AUTH.GOOGLE_LOGIN,
-        { accessToken }
-      );
-
-      if (response.success && response.data) {
-        const loginResponse = response.data;
-        const { user } = loginResponse;
-
-        // 사용자 정보만 로컬에 저장 (토큰은 HttpOnly 쿠키로 서버에서 설정됨)
-        this.setUser(user);
-
-        logger.userAction('Google login success', { userId: user.id });
-        return loginResponse;
-      } else {
-        throw new Error(response.message || 'Google login failed');
-      }
-    } catch (error) {
-      logger.error('Google login failed', error);
-      throw error;
-    }
-  }
-
-  async loginWithGoogleCode(authorizationCode: string): Promise<GoogleLoginResponse> {
-    try {
-      logger.userAction('Google login with authorization code');
-
-      if (!this.apiClient) {
-        throw new Error('API client not initialized');
-      }
-
-      const response = await this.apiClient.post<GoogleLoginResponse>(
-        API_ENDPOINTS.AUTH.GOOGLE_LOGIN_CODE,
-        { code: authorizationCode }
-      );
-
-      if (response.success && response.data) {
-        const loginResponse = response.data;
-        const { user } = loginResponse;
-
-        // 사용자 정보만 로컬에 저장
-        this.setUser(user);
-
-        logger.userAction('Google login with code success', { userId: user.id });
-        return loginResponse;
-      } else {
-        throw new Error(response.message || 'Google login with code failed');
-      }
-    } catch (error) {
-      logger.error('Google login with code failed', error);
-      throw error;
-    }
-  }
-
   async setUserFromToken(token: string): Promise<GoogleLoginResponse> {
     try {
       logger.userAction('Setting user from JWT token');

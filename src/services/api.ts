@@ -32,7 +32,7 @@ class ApiClient {
         if (authService && authService.getAuthHeader) {
           const authHeaders = authService.getAuthHeader();
           if (authHeaders && Object.keys(authHeaders).length > 0) {
-            config.headers = { ...config.headers, ...authHeaders } as Record<string, string>;
+            Object.assign(config.headers!, authHeaders);
           }
         } else {
           console.warn('⚠️ AuthService not available for API request');

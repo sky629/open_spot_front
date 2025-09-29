@@ -95,12 +95,6 @@ export class AuthServiceImpl extends SecureAuthService implements IAuthServiceFu
   }
 
   // 기존 메서드들을 오버라이드하여 상태 변경 알림 추가
-  async loginWithGoogle(accessToken: string) {
-    const result = await super.loginWithGoogle(accessToken);
-    this.notifyAuthStateChange();
-    return result;
-  }
-
   async logout() {
     await super.logout();
     this.notifyAuthStateChange();

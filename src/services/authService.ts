@@ -98,35 +98,6 @@ export class AuthService {
     return !!(accessToken && user && !this.isTokenExpired());
   }
 
-  // Google OAuth 로그인 (Access Token을 백엔드로 전송)
-  async loginWithGoogle(accessToken: string): Promise<GoogleLoginResponse> {
-    try {
-      logger.userAction('Google login with access token');
-
-      const response = await api.get<ApiResponse<GoogleLoginResponse>>(
-        API_ENDPOINTS.AUTH.GOOGLE_LOGIN,
-        { accessToken }
-      );
-
-      if (response.success && response.data) {
-        const loginResponse = response.data.data;
-        const { user, tokens } = loginResponse;
-
-        // 토큰과 사용자 정보 저장
-        this.setTokens(tokens);
-        this.setUser(user);
-
-        logger.userAction('Google login success', { userId: user.id });
-        return loginResponse;
-      } else {
-        throw new Error(response.message || 'Google login failed');
-      }
-    } catch (error) {
-      logger.error('Google login failed', error);
-      throw error;
-    }
-  }
-
   // JWT 토큰으로부터 사용자 설정 (백엔드에서 OAuth 처리 후 리다이렉트 시 사용)
   async setUserFromToken(token: string): Promise<GoogleLoginResponse> {
     try {

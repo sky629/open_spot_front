@@ -1,4 +1,5 @@
 // 인증 상태 관리를 위한 React Context
+/* eslint-disable react-refresh/only-export-components */
 
 import React, { createContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { authService } from '../services/authService';
@@ -12,7 +13,6 @@ export interface AuthContextType {
   isLoading: boolean;
 
   // 액션
-  loginWithGoogle: (accessToken: string) => Promise<void>;
   setUserFromToken: (token: string) => Promise<void>;
   setUser: (user: User) => void;
   logout: () => Promise<void>;
@@ -84,20 +84,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
-  // Google OAuth 로그인 (Access Token 사용)
-  const loginWithGoogle = async (accessToken: string): Promise<void> => {
-    try {
-      logger.userAction('Google login with access token');
-
-      const loginResponse = await authService.loginWithGoogle(accessToken);
-      setUser(loginResponse.user);
-
-      logger.userAction('Google login completed successfully', { userId: loginResponse.user.id });
-    } catch (error) {
-      logger.error('Google login failed', error);
-      throw error;
-    }
-  };
 
   // JWT 토큰으로부터 사용자 설정 (백엔드 OAuth 성공 후)
   const setUserFromToken = async (token: string): Promise<void> => {
@@ -178,7 +164,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isAuthenticated,
     isLoading,
-    loginWithGoogle,
     setUserFromToken,
     setUser: setUserData,
     logout,

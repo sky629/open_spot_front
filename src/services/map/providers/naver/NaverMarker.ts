@@ -1,5 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   IMapMarker,
+  IMapService,
   MapCoordinate,
   MarkerIcon,
   InfoWindowOptions,
@@ -18,6 +20,11 @@ interface NaverMapMarker {
   addListener: (event: string, callback: () => void) => void;
   removeListener: (event: string, callback: () => void) => void;
   destroy?: () => void;
+  // 누락된 메서드들 추가
+  getTitle?: () => string;
+  setTitle?: (title: string) => void;
+  getZIndex?: () => number;
+  setZIndex?: (zIndex: number) => void;
 }
 
 export class NaverMarker implements IMapMarker {
@@ -49,11 +56,13 @@ export class NaverMarker implements IMapMarker {
   }
 
   getTitle(): string | undefined {
-    return this.naverMarker.getTitle();
+    return this.naverMarker.getTitle ? this.naverMarker.getTitle() : undefined;
   }
 
   setTitle(title: string): void {
-    this.naverMarker.setTitle(title);
+    if (this.naverMarker.setTitle) {
+      this.naverMarker.setTitle(title);
+    }
   }
 
   getVisible(): boolean {
@@ -65,11 +74,13 @@ export class NaverMarker implements IMapMarker {
   }
 
   getZIndex(): number {
-    return this.naverMarker.getZIndex();
+    return this.naverMarker.getZIndex ? this.naverMarker.getZIndex() : 0;
   }
 
   setZIndex(zIndex: number): void {
-    this.naverMarker.setZIndex(zIndex);
+    if (this.naverMarker.setZIndex) {
+      this.naverMarker.setZIndex(zIndex);
+    }
   }
 
   setIcon(icon: string | MarkerIcon): void {
@@ -92,7 +103,7 @@ export class NaverMarker implements IMapMarker {
     }
 
     this.infoWindow = new NaverInfoWindow(options);
-    this.infoWindow.open(null as unknown, this); // Map service will be passed properly
+    this.infoWindow.open(null as unknown as IMapService, this); // Map service will be passed properly
   }
 
   closeInfoWindow(): void {
@@ -109,7 +120,7 @@ export class NaverMarker implements IMapMarker {
     this.listeners.get(eventName)!.push(listener);
 
     // Add listener to the actual Naver marker
-    window.naver.maps.Event.addListener(this.naverMarker, eventName, listener);
+    window.naver.maps.Event.addListener(this.naverMarker, eventName, listener as any);
   }
 
   removeListener(eventName: string, listener: (event: MapEvent) => void): void {
@@ -119,7 +130,7 @@ export class NaverMarker implements IMapMarker {
       if (index !== -1) {
         eventListeners.splice(index, 1);
         // Remove listener from the actual Naver marker
-        window.naver.maps.Event.removeListener(this.naverMarker, eventName, listener);
+        window.naver.maps.Event.removeListener(listener as any);
       }
     }
   }
@@ -132,9 +143,9 @@ export class NaverMarker implements IMapMarker {
     }
 
     // Remove all listeners
-    this.listeners.forEach((listeners, eventName) => {
+    this.listeners.forEach((listeners) => {
       listeners.forEach(listener => {
-        window.naver.maps.Event.removeListener(this.naverMarker, eventName, listener);
+        window.naver.maps.Event.removeListener(listener as any);
       });
     });
     this.listeners.clear();

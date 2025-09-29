@@ -121,7 +121,7 @@ class DevTools {
       if (performance.getEntriesByType) {
         const navigationEntries = performance.getEntriesByType('navigation');
         if (navigationEntries.length > 0) {
-          info.performance.navigation = navigationEntries[0];
+          info.performance.navigation = navigationEntries[0] as PerformanceNavigationTiming;
         }
       }
     }

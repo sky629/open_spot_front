@@ -8,7 +8,6 @@ export const API_ENDPOINTS = {
   // 백엔드 인증 관련 엔드포인트
   AUTH: {
     GOOGLE_LOGIN: '/api/v1/auth/google/login',
-    GOOGLE_LOGIN_CODE: '/api/v1/auth/google/login/code',
     VERIFY_TOKEN: '/api/v1/auth/verify',
     LOGOUT: '/api/v1/auth/logout',
     USER_PROFILE: '/api/v1/users/self',

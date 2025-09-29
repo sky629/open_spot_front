@@ -181,40 +181,6 @@ export const useAuthStore = create<AuthState>()(
         },
 
         // 비동기 액션들
-        loginWithGoogle: async (accessToken: string) => {
-          const { isServiceReady } = get();
-
-          if (!isServiceReady || !authService) {
-            const errorMessage = 'Authentication service is not ready. Please wait...';
-            set((state) => ({ ...state, error: errorMessage }));
-            throw new Error(errorMessage);
-          }
-
-          try {
-            set((state) => ({ ...state, isLoading: true, error: null }));
-
-            logger.userAction('Starting Google login with access token');
-
-            const loginResponse = await authService.loginWithGoogle(accessToken);
-
-            set((state) => ({
-              ...state,
-              user: loginResponse.user,
-              isAuthenticated: !!loginResponse.user,
-              isLoading: false,
-              error: null
-            }));
-
-            logger.userAction('Google login completed successfully', {
-              userId: loginResponse.user.id
-            });
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Google login failed';
-            set((state) => ({ ...state, error: errorMessage, isLoading: false }));
-            logger.error('Google login failed in store', error);
-            throw error;
-          }
-        },
 
         setUserFromToken: async (token: string) => {
           const { isServiceReady, isLoading, user } = get();

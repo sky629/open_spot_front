@@ -197,7 +197,7 @@ class PerformanceMonitor {
         let clsValue = 0;
         list.getEntries().forEach((entry: PerformanceEntry & { value?: number; hadRecentInput?: boolean }) => {
           if (!entry.hadRecentInput) {
-            clsValue += entry.value;
+            clsValue += entry.value || 0;
           }
         });
 

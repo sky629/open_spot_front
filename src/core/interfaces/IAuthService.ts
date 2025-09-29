@@ -3,13 +3,6 @@ import type { User, GoogleLoginResponse } from '../../types';
 
 export interface IAuthService {
   /**
-   * Google OAuth 로그인 (Access Token 사용)
-   * @param accessToken - Google 액세스 토큰
-   * @returns 로그인 응답
-   */
-  loginWithGoogle(accessToken: string): Promise<GoogleLoginResponse>;
-
-  /**
    * JWT 토큰으로부터 사용자 설정
    * @param token - JWT 토큰
    * @returns 로그인 응답
