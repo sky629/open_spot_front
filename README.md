@@ -1,25 +1,29 @@
 # Open Spot Front
 
-네이버 지도 API를 활용한 위치 기반 서비스 프론트엔드 애플리케이션입니다. 백엔드 API에서 GPS 좌표 데이터를 조회하여 지도상에 마커로 표시하는 기능을 제공합니다.
+React TypeScript 기반의 위치 정보 공유 플랫폼 프론트엔드입니다. 네이버 지도 API를 활용하여 카테고리별 장소 정보를 표시하고, Google OAuth 인증을 통한 사용자 관리 기능을 제공합니다.
 
 ## 🚀 주요 기능
 
-- **📍 네이버 지도 연동**: 네이버 지도 API를 활용한 인터랙티브 지도
-- **🎯 위치 마커 표시**: 백엔드 API에서 조회한 GPS 좌표를 지도상에 마커로 표시
-- **🏷️ 카테고리 필터링**: 음식점, 카페, 쇼핑, 공원 등 카테고리별 위치 필터링
-- **📱 반응형 디자인**: 모바일과 데스크톱 모든 환경에서 최적화된 UI
+- **🔐 Google OAuth 인증**: 간편한 구글 계정 로그인
+- **📍 네이버 지도 연동**: 네이버 클라우드 플랫폼 Maps API v3 활용
+- **🎯 카테고리별 마커 표시**: 음식점, 카페, 쇼핑, 공원 등 카테고리별 SVG 마커
+- **📱 반응형 사이드바**: 데스크톱 사이드바, 모바일 오버레이 UI
+- **🏷️ 실시간 카테고리 필터링**: 위치 개수와 함께 카테고리별 필터링
 - **💬 정보창**: 마커 클릭 시 위치 상세 정보 표시
-- **🔄 실시간 업데이트**: 지도 이동 시 해당 영역의 위치 정보 자동 조회
+- **🏗️ 의존성 주입**: Clean Architecture 기반 서비스 계층
 
 ## 🛠️ 기술 스택
 
 - **Frontend**: React 18, TypeScript
-- **Build Tool**: Vite
+- **Build Tool**: Vite 7
 - **Package Manager**: Yarn
-- **Styling**: Styled-components
-- **HTTP Client**: Axios
-- **Map API**: Naver Maps API
-- **State Management**: React Hooks
+- **Styling**: Styled Components
+- **State Management**: Zustand with persistence
+- **Authentication**: Google OAuth 2.0
+- **HTTP Client**: Axios with interceptors
+- **Map API**: Naver Cloud Platform Maps API v3
+- **Architecture**: Feature-based with Dependency Injection
+- **Routing**: React Router DOM v7
 
 ## 📋 사전 요구사항
 
@@ -54,11 +58,17 @@ cp .env.example .env
 
 `.env` 파일 내용:
 ```env
-# 네이버 지도 API 키 (필수)
-VITE_NAVER_MAP_CLIENT_ID=your_naver_map_client_id_here
+# 네이버 클라우드 플랫폼 Maps API Key ID (필수)
+VITE_NAVER_MAP_CLIENT_ID=your_ncp_key_id_here
 
-# 백엔드 API URL
-VITE_API_BASE_URL=http://localhost:8000
+# 백엔드 API URL (Spring Boot Gateway)
+VITE_API_BASE_URL=http://localhost:8080
+
+# Google OAuth Client ID (필수)
+VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+
+# OAuth Redirect URI
+VITE_OAUTH_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
 ```
 
 #### 네이버 클라우드 플랫폼 Maps API 키 발급 방법:
@@ -84,70 +94,127 @@ yarn dev
 
 ## 📦 빌드 및 배포
 
-### 프로덕션 빌드
+### 개발 명령어
 
 ```bash
+# 개발 서버 시작
+yarn dev
+
+# 빌드 (타입 체크 없이 빠른 빌드)
 yarn build
-```
 
-### 빌드 미리보기
+# 빌드 + 타입 체크 (완전한 검증)
+yarn build:check
 
-```bash
+# 빌드 미리보기
 yarn preview
-```
 
-### 타입 체크
-
-```bash
+# 타입 체크만 실행
 yarn type-check
+
+# ESLint 코드 린팅
+yarn lint
+
+# 개발 서버 종료 (포트 정리 포함)
+yarn kill:servers
+
+# 서버 재시작 (종료 + 시작)
+yarn restart
 ```
 
-### 코드 린팅
+### Docker 배포
 
 ```bash
-yarn lint
+# 프로덕션 배포 (nginx 컨테이너)
+sh deploy.sh prod
+
+# 로컬 Docker 빌드 테스트
+docker-compose up --build
 ```
 
 ## 🏗️ 프로젝트 구조
 
 ```
 src/
-├── components/          # 재사용 가능한 UI 컴포넌트
-│   ├── Map/            # 지도 관련 컴포넌트
-│   │   ├── MapContainer.tsx     # 메인 지도 컨테이너
-│   │   └── LocationMarker.tsx   # 위치 마커 컴포넌트
-│   └── UI/             # 공통 UI 컴포넌트
-├── pages/              # 페이지 컴포넌트
-│   └── MainPage.tsx    # 메인 페이지
-├── services/           # API 통신 레이어
-│   ├── api.ts          # 기본 API 클라이언트
-│   └── locationService.ts # 위치 데이터 API
-├── hooks/              # 커스텀 React 훅
-│   ├── useLocations.ts # 위치 데이터 상태 관리
-│   └── useNaverMap.ts  # 네이버 지도 인스턴스 관리
-├── types/              # TypeScript 타입 정의
-│   ├── naver-maps.d.ts # 네이버 지도 API 타입
-│   └── api.ts          # API 응답 타입
-├── constants/          # 애플리케이션 상수
-│   ├── map.ts          # 지도 설정 및 마커 아이콘
-│   └── api.ts          # API 엔드포인트
-└── utils/              # 유틸리티 함수
-    └── loadNaverMaps.ts # 동적 지도 API 로딩
+├── components/         # 재사용 가능한 UI 컴포넌트
+│   ├── Map/           # 지도 관련 컴포넌트
+│   │   ├── MapContainer.tsx    # 메인 지도 컨테이너
+│   │   └── LocationMarker.tsx  # 개별 위치 마커
+│   ├── Sidebar/       # 사이드바 네비게이션
+│   │   ├── Sidebar.tsx         # 메인 사이드바 (카테고리 필터링)
+│   │   ├── SidebarItem.tsx     # 개별 카테고리 아이템 (개수 포함)
+│   │   └── LocationItem.tsx    # 위치 목록 아이템
+│   ├── common/        # 공통 UI 컴포넌트
+│   ├── ProtectedRoute.tsx      # 인증 보호 라우트
+│   └── TokenHandler.tsx        # JWT 토큰 처리
+├── pages/             # 페이지 컴포넌트
+│   ├── LoginPage.tsx           # Google OAuth 로그인
+│   ├── AuthCallbackPage.tsx    # OAuth 콜백 핸들러
+│   └── MapPage.tsx            # 메인 지도 페이지 (사이드바 포함)
+├── hooks/             # 커스텀 React 훅
+│   ├── useLocations.ts        # 위치 데이터 관리 (카테고리 개수 포함)
+│   ├── useNaverMap.ts         # 네이버 지도 인스턴스 관리
+│   └── useAuth.ts             # 인증 상태 관리
+├── services/          # 외부 API 서비스
+│   ├── locationService.ts     # 위치 CRUD (Mock-first 전략)
+│   ├── authService.ts         # Google OAuth 통합
+│   └── api.ts                 # 베이스 API 클라이언트 (인터셉터 포함)
+├── stores/            # Zustand 스토어 (레거시, 훅으로 교체 중)
+│   ├── auth/         # 인증 스토어 (서비스 주입 패턴)
+│   └── location/     # 위치 스토어
+├── contexts/          # React Context 프로바이더
+│   └── AuthContext.tsx        # 인증 컨텍스트
+├── core/              # 애플리케이션 코어
+│   ├── container/    # 의존성 주입 컨테이너
+│   │   ├── Container.ts       # DI 컨테이너 구현
+│   │   └── ServiceTokens.ts   # 서비스 토큰 정의
+│   └── interfaces/   # 서비스 인터페이스
+├── constants/         # 애플리케이션 상수
+│   ├── map.ts                 # 지도 설정, 카테고리, 마커 아이콘
+│   └── api.ts                 # API 엔드포인트
+├── types/             # TypeScript 타입 정의
+├── utils/             # 유틸리티 함수
+└── setup/             # 애플리케이션 초기화
+    └── initializeApplication.ts
 ```
+
+### 아키텍처 특징
+
+- **Feature-based Architecture**: 기능별 디렉토리 구조
+- **Dependency Injection**: 서비스 계층 의존성 주입
+- **Mock-first Development**: 즉시 목 데이터 반환, API 준비시 쉬운 전환
+- **Clean Separation**: UI, 비즈니스 로직, 데이터 레이어 분리
+- **Type Safety**: 모든 레이어에서 TypeScript 강타입 적용
 
 ## 🔌 API 연동
 
-이 애플리케이션은 다음과 같은 백엔드 API 엔드포인트를 사용합니다:
+### 현재 상태: Mock-first 개발 전략
+
+현재 애플리케이션은 **즉시 목 데이터 반환** 방식으로 구현되어 있습니다:
+
+- **23개 서울 위치 데이터**: 실제 서울 지역 장소들로 구성
+- **카테고리별 분류**: 음식점(8), 카페(5), 쇼핑(5), 공원(5)
+- **즉시 응답**: API 호출 대신 즉시 목 데이터 반환
+- **쉬운 전환**: 백엔드 준비시 주석 해제로 간단 전환
+
+### 백엔드 API 엔드포인트 (준비됨)
 
 ```
+# 인증 관련
+POST   /api/v1/auth/login          # Google OAuth 로그인
+POST   /api/v1/auth/refresh        # JWT 토큰 갱신
+POST   /api/v1/auth/logout         # 로그아웃
+
+# 위치 관련 (locationService.ts에 구현 준비됨)
 GET    /api/v1/locations           # 모든 위치 조회
+GET    /api/v1/locations?category=cafe  # 카테고리별 조회
 GET    /api/v1/locations/:id       # 특정 위치 조회
 POST   /api/v1/locations           # 새 위치 생성
 PUT    /api/v1/locations/:id       # 위치 정보 업데이트
 DELETE /api/v1/locations/:id       # 위치 삭제
 ```
 
-### 예상 API 응답 형식:
+### API 응답 형식
 
 ```json
 {
@@ -155,12 +222,12 @@ DELETE /api/v1/locations/:id       # 위치 삭제
   "data": [
     {
       "id": "1",
-      "name": "카페 이름",
+      "name": "광화문 카페",
       "latitude": 37.5665,
       "longitude": 126.9780,
-      "description": "맛있는 커피를 제공하는 카페",
+      "description": "역사적인 광화문 근처의 아늑한 카페",
       "category": "cafe",
-      "iconUrl": "https://example.com/icon.png",
+      "address": "서울특별시 종로구 세종대로",
       "createdAt": "2024-01-01T00:00:00Z",
       "updatedAt": "2024-01-01T00:00:00Z"
     }
@@ -168,17 +235,43 @@ DELETE /api/v1/locations/:id       # 위치 삭제
 }
 ```
 
-## 🎨 디자인 패턴
+### 백엔드 API 전환 방법
 
-이 프로젝트는 다음과 같은 디자인 패턴들을 적용했습니다:
+`src/services/locationService.ts`에서:
 
-- **Layered Architecture**: UI, 비즈니스 로직, 데이터 접근 계층 분리
-- **Repository Pattern**: 데이터 접근 로직 추상화
-- **Custom Hook Pattern**: React 상태 관리 및 로직 재사용
-- **Factory Pattern**: API 클라이언트 인스턴스 생성
-- **Observer Pattern**: React 상태 변화 감지
-- **Adapter Pattern**: 외부 API를 React에 맞게 변환
-- **Facade Pattern**: 복잡한 로직을 단순한 인터페이스로 제공
+```typescript
+// 현재: Mock-first 전략
+return filteredLocations;
+
+// TODO: 백엔드 API 준비시 주석 해제
+// const response = await apiClient.get<LocationResponse[]>(API_ENDPOINTS.LOCATIONS, params);
+// return response.data;
+```
+
+## 🎨 아키텍처 패턴
+
+### 디자인 패턴
+
+- **Dependency Injection**: 서비스 계층의 의존성을 런타임에 주입
+- **Repository Pattern**: 데이터 접근 로직 추상화 (`locationService.ts`)
+- **Custom Hook Pattern**: React 상태 관리 및 로직 재사용 (`useAuth`, `useLocations`)
+- **Factory Pattern**: DI 컨테이너에서 서비스 인스턴스 생성
+- **Observer Pattern**: Zustand 상태 변화 감지 및 React 구독
+- **Adapter Pattern**: Naver Maps API를 React에 맞게 변환
+- **Facade Pattern**: 복잡한 인증/API 로직을 단순한 인터페이스로 제공
+
+### 상태 관리 전략
+
+- **Zustand with Persistence**: 인증 상태 브라우저 저장
+- **Service Injection**: Zustand 스토어에 서비스 의존성 주입
+- **Infinite Loop Prevention**: 상태 동등성 검사로 무한 루프 방지
+- **React Context**: 컴포넌트 간 인증 상태 공유
+
+### 개발 전략
+
+- **Mock-first Development**: API 개발 대기 없이 프론트엔드 완성
+- **Type-driven Development**: TypeScript 타입 먼저 정의 후 구현
+- **Component-driven**: Storybook 없이도 컴포넌트 단위 개발
 
 ## 📱 반응형 디자인
 
@@ -190,39 +283,68 @@ DELETE /api/v1/locations/:id       # 위치 삭제
 
 ### 새로운 위치 카테고리 추가
 
-1. `src/constants/map.ts`에서 `MAP_CATEGORIES`와 `MARKER_ICONS` 업데이트
-2. `src/pages/MainPage.tsx`에서 카테고리 필터 옵션 추가
+1. **상수 업데이트**: `src/constants/map.ts`
+   ```typescript
+   export const MAP_CATEGORIES = {
+     // 기존 카테고리...
+     NEW_CATEGORY: 'new_category',
+   };
 
-### 커스텀 마커 아이콘 사용
+   export const MARKER_ICONS = {
+     // 기존 아이콘...
+     NEW_CATEGORY: '/icons/marker-new-category.svg',
+   };
+   ```
 
-1. `public/icons/` 폴더에 아이콘 파일 추가
-2. `src/constants/map.ts`의 `MARKER_ICONS` 객체에 경로 등록
-3. `LocationMarker.tsx`에서 카테고리별 아이콘 매핑
+2. **아이콘 생성**: `public/icons/marker-new-category.svg` 추가
 
-### API 엔드포인트 변경
+3. **목 데이터 업데이트**: `src/services/locationService.ts`의 `mockLocations`에 새 카테고리 데이터 추가
 
-1. `src/constants/api.ts`에서 엔드포인트 URL 수정
-2. `src/types/api.ts`에서 관련 타입 정의 업데이트
-3. `src/services/locationService.ts`에서 서비스 메서드 수정
+### 커스텀 마커 아이콘 생성
+
+1. **SVG 아이콘 생성**: `public/icons/` 폴더에 32x32 SVG 파일 추가
+2. **아이콘 등록**: `src/constants/map.ts`의 `MARKER_ICONS`에 경로 등록
+3. **테스트**: `http://localhost:3000/icons/your-icon.svg`로 접근 가능 확인
+
+### 백엔드 API 연결
+
+1. **환경 변수 설정**: `.env`에서 `VITE_API_BASE_URL` 확인
+2. **서비스 전환**: `src/services/locationService.ts`에서 TODO 주석 해제
+3. **목 데이터 비활성화**: `return filteredLocations;` 라인 주석 처리
+
+### 새로운 서비스 추가
+
+1. **인터페이스 정의**: `src/core/interfaces/` 에 인터페이스 추가
+2. **서비스 구현**: `src/services/` 에 구현체 생성
+3. **토큰 등록**: `src/core/container/ServiceTokens.ts`에 토큰 추가
+4. **컨테이너 등록**: `src/setup/initializeApplication.ts`에서 서비스 등록
 
 ## 🐛 문제 해결
 
 ### 지도가 로드되지 않는 경우
-- **API 키 확인**: 네이버 클라우드 플랫폼에서 발급받은 Key ID가 올바르게 설정되었는지 확인
-- **API 마이그레이션**: 기존 AI NAVER API 키를 사용하고 있다면 NCP API로 이전 필요
-- **도메인 등록**: NCP 콘솔에서 현재 도메인(localhost:3000 포함)이 등록되어 있는지 확인
-- **에러 메시지**: 개발자 도구 콘솔에서 인증 실패(authFailure) 또는 리소스 로드 에러 확인
-- **네트워크 연결**: 인터넷 연결 상태 확인
+- **NCP API 키 확인**: `.env`의 `VITE_NAVER_MAP_CLIENT_ID`가 올바른 Key ID인지 확인
+- **도메인 등록**: NCP 콘솔에서 `http://localhost:3000` 도메인이 등록되어 있는지 확인
+- **401 Unauthorized**: 콘솔에서 `http://oapi.map.naver.com/v3/auth` 401 에러시 도메인 등록 문제
+- **API 마이그레이션**: 기존 AI NAVER API 키는 2025년부터 사용 불가
 
-### API 통신 에러
-- 백엔드 서버가 실행 중인지 확인
-- `API_BASE_URL` 환경 변수가 올바른지 확인
-- CORS 설정이 적절한지 백엔드에서 확인
+### 마커 아이콘 404 에러
+- **아이콘 파일 확인**: `public/icons/` 폴더에 SVG 파일들이 있는지 확인
+- **경로 확인**: `src/constants/map.ts`의 `MARKER_ICONS` 경로가 올바른지 확인
+- **서빙 테스트**: `curl -I http://localhost:3000/icons/marker-default.svg`로 200 응답 확인
+
+### Google OAuth 로그인 실패
+- **Client ID 확인**: `.env`의 `VITE_GOOGLE_CLIENT_ID`가 올바른지 확인
+- **리다이렉트 URI**: Google Console에서 `http://localhost:8080/login/oauth2/code/google` 등록 확인
+- **백엔드 연결**: 백엔드 서버 `localhost:8080`이 실행 중인지 확인
 
 ### 빌드 에러
-- Node.js 버전이 16.0 이상인지 확인
-- `yarn install`로 의존성 재설치
-- TypeScript 타입 에러가 있는지 `yarn type-check`로 확인
+- **타입 체크 분리**: `yarn build` (빠른 빌드) vs `yarn build:check` (타입 체크 포함)
+- **의존성 재설치**: `yarn install`로 node_modules 재설치
+- **Docker 빌드**: `.dockerignore`가 `.env` 파일을 제외하고 있는지 확인
+
+### 개발 서버 포트 충돌
+- **포트 정리**: `yarn kill:servers`로 기존 프로세스 종료
+- **재시작**: `yarn restart`로 서버 재시작
 
 ## 📄 라이선스
 
