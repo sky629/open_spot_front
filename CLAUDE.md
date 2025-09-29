@@ -20,15 +20,13 @@ React TypeScript frontend application with feature-based architecture, displayin
 
 ## Development Commands
 
+### Local Development
 ```bash
 # Install dependencies (uses yarn)
 yarn install
 
 # Start development server
 yarn dev
-
-# Build for production
-yarn build
 
 # Type checking
 yarn type-check
@@ -41,6 +39,66 @@ yarn kill:servers
 
 # Restart development server (kill + start)
 yarn restart
+```
+
+### Build Commands
+```bash
+# Fast build (no type checking)
+yarn build
+
+# Build with full TypeScript type checking
+yarn build:check
+
+# Preview production build
+yarn preview
+```
+
+### Docker Development
+```bash
+# Build Docker image
+yarn docker:build
+
+# Run production container
+yarn docker:run
+
+# Start development environment
+yarn docker:dev
+
+# Start production environment
+yarn docker:prod
+
+# Stop containers
+yarn docker:stop
+yarn docker:stop:dev
+
+# View container logs
+yarn docker:logs
+yarn docker:logs:dev
+```
+
+### Deployment
+```bash
+# Production deployment
+yarn deploy
+./deploy.sh prod
+
+# Development deployment
+yarn deploy:dev
+./deploy.sh dev
+
+# Check deployment status
+yarn deploy:status
+./deploy.sh prod status
+
+# View deployment logs
+./deploy.sh prod logs
+
+# Stop deployment
+./deploy.sh prod stop
+
+# Clean deployment (remove images)
+yarn deploy:clean
+./deploy.sh prod clean
 ```
 
 ## Environment Setup
@@ -102,10 +160,11 @@ src/
 ### Dependency Injection Container
 
 The application uses a custom DI container (`src/core/container/Container.ts`):
-- Services registered with tokens in `ServiceTokens.ts`
+- Services registered with tokens in `src/core/container/ServiceTokens.ts`
 - Supports singleton and factory patterns
-- Services injected into stores via `setAuthServiceForStore()`
-- Container initialized in `src/setup/initializeApplication.ts`
+- Services injected into stores via `setupStores()`
+- Container initialized in `src/setup/serviceRegistration.ts`
+- Circular dependency resolution for Auth and API services
 
 ### State Management with Zustand
 
@@ -133,10 +192,31 @@ The application uses a custom DI container (`src/core/container/Container.ts`):
 
 Entry point: `src/main.tsx` → `NewApp.tsx`
 
-1. **Initialization**: `initializeApplication()` sets up DI container and services
-2. **Service Registration**: Auth and API services registered with container
-3. **Store Injection**: Services injected into Zustand stores
-4. **Route Protection**: Authentication checked for protected routes
+1. **Service Registration**: `registerServices()` sets up DI container with all services
+2. **Store Configuration**: `configureStores()` injects services into Zustand stores
+3. **Auto-Authentication**: Attempts automatic login from stored credentials
+4. **Token Management**: Sets up automatic token refresh intervals
+5. **Route Protection**: Authentication checked for protected routes
+
+### Service Registration Process
+
+```typescript
+// In src/setup/serviceRegistration.ts
+export const initializeApplication = async (): Promise<void> => {
+  // 1. Register all services in DI container
+  registerServices();
+
+  // 2. Configure stores with injected services
+  configureStores();
+
+  // 3. Attempt auto-login from stored credentials
+  const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE);
+  await authService.attemptAutoLogin();
+
+  // 4. Setup automatic token refresh
+  authService.setupAutoTokenRefresh();
+};
+```
 
 ## Key Service Patterns
 
@@ -197,8 +277,21 @@ When `/api/v1/locations` endpoint is ready:
 
 ### Service Registration
 ```typescript
-// In setup/initializeApplication.ts
-container.register(ServiceTokens.AUTH_SERVICE, () => new AuthService(...));
+// In src/setup/serviceRegistration.ts
+container.register(
+  SERVICE_TOKENS.AUTH_SERVICE,
+  () => {
+    const authService = new AuthServiceImpl();
+    const apiClient = container.resolve(SERVICE_TOKENS.API_CLIENT);
+
+    // Inject dependencies and resolve circular references
+    authService.setApiClient(apiClient);
+    apiClient.setAuthService(authService);
+
+    return authService;
+  },
+  true // singleton
+);
 ```
 
 ### Custom Hook Pattern
@@ -210,12 +303,39 @@ const { locations, locationCounts } = useLocations();
 const { mapRef, map, isLoaded } = useNaverMap({ center, zoom });
 ```
 
+## Docker & Deployment
+
+### Deployment Script Features
+The `deploy.sh` script provides comprehensive deployment management:
+- **Multi-environment**: Supports `dev` and `prod` environments
+- **Health Checks**: Automatic service health verification
+- **Container Management**: Clean startup/shutdown with orphan removal
+- **Image Cleanup**: Automatic pruning of old images
+- **Logging**: Colored output with status indicators
+
+### Docker Architecture
+- **Development**: Hot-reload enabled with volume mounts
+- **Production**: Multi-stage build with nginx serving static assets
+- **Environment Variables**: Build-time injection via Docker build args
+- **Port Configuration**:
+  - Development: `localhost:3000` (Vite) + `localhost:80` (nginx)
+  - Production: `localhost:80` (nginx only)
+
+### Kill Servers Script
+The `scripts/kill-servers.sh` script provides:
+- **Docker Container Cleanup**: Stops dev and prod containers
+- **Port Cleanup**: Kills processes on ports 80 and 3000
+- **Process Management**: Terminates yarn dev, vite, and related node processes
+- **Interactive Restart**: Optional prompt to restart development server
+
 ## Backend Integration
 
 - **API Base URL**: `http://localhost:8080` (Spring Boot Gateway)
 - **Auth Endpoints**: `/api/v1/auth/*`
 - **Location Endpoints**: `/api/v1/locations/*`
 - **OAuth Callback**: `/login/oauth2/code/google`
+- **Environment Variables**: Injected at Docker build time via build args
+- **CORS Configuration**: Frontend origin whitelisted for API access
 
 ## Error Handling
 
@@ -230,3 +350,31 @@ const { mapRef, map, isLoaded } = useNaverMap({ center, zoom });
 - Zustand state persistence with selective serialization
 - Service singleton patterns in DI container
 - Infinite loop prevention in store updates
+
+## Build System & Scripts
+
+### Build Variants
+- **`yarn build`**: Fast production build without TypeScript type checking
+- **`yarn build:check`**: Full build with TypeScript compilation and type checking
+- **Strategy**: Separate type checking from build for faster CI/CD pipelines
+
+### Script Utilities
+- **`scripts/kill-servers.sh`**: Comprehensive development server cleanup
+  - Stops Docker containers (dev and prod)
+  - Kills processes on ports 80 and 3000
+  - Terminates yarn dev, vite, and node processes
+  - Interactive restart options
+
+### Docker Build Strategy
+- **Multi-stage builds**: Separate build and runtime stages
+- **Build arguments**: Environment variables injected at build time
+- **Static asset serving**: nginx serves built files efficiently
+- **Environment handling**: No .env files copied, all vars via build args
+
+### Development Workflow
+1. **Local Development**: Use `yarn dev` for hot-reload
+2. **Type Checking**: Run `yarn type-check` before commits
+3. **Linting**: Use `yarn lint` to catch code quality issues
+4. **Server Cleanup**: Use `yarn kill:servers` to reset development environment
+5. **Docker Testing**: Use `yarn docker:dev` to test containerized development
+6. **Production Testing**: Use `./deploy.sh prod` to test full deployment
