@@ -11,11 +11,11 @@ export const MAP_CONFIG = {
 } as const;
 
 export const MARKER_ICONS = {
-  DEFAULT: '/icons/marker-default.png',
-  RESTAURANT: '/icons/marker-restaurant.png',
-  CAFE: '/icons/marker-cafe.png',
-  SHOPPING: '/icons/marker-shopping.png',
-  PARK: '/icons/marker-park.png',
+  DEFAULT: '/icons/marker-default.svg',
+  RESTAURANT: '/icons/marker-restaurant.svg',
+  CAFE: '/icons/marker-cafe.svg',
+  SHOPPING: '/icons/marker-shopping.svg',
+  PARK: '/icons/marker-park.svg',
 } as const;
 
 export const MAP_CATEGORIES = {
