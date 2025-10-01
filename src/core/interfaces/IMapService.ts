@@ -1,6 +1,6 @@
 export interface MapCoordinate {
   lat: number;
-  lng: number;
+  lon: number;
 }
 
 export interface MapEvent {

@@ -116,7 +116,7 @@ export class NaverInfoWindow implements IInfoWindow {
 
   setPosition(position: MapCoordinate): void {
     this.options.position = position;
-    const naverLatLng = new window.naver.maps.LatLng(position.lat, position.lng);
+    const naverLatLng = new window.naver.maps.LatLng(position.lat, position.lon);
     this.naverInfoWindow.setPosition(naverLatLng);
   }
 
@@ -125,7 +125,7 @@ export class NaverInfoWindow implements IInfoWindow {
     if (position) {
       return {
         lat: typeof position.lat === 'function' ? position.lat() : position.lat,
-        lng: typeof position.lng === 'function' ? position.lng() : position.lng,
+        lon: typeof position.lng === 'function' ? position.lng() : position.lng,
       };
     }
     return this.options.position;

@@ -46,12 +46,12 @@ export class NaverMarker implements IMapMarker {
     const position = this.naverMarker.getPosition();
     return {
       lat: typeof position.lat === 'function' ? position.lat() : position.lat,
-      lng: typeof position.lng === 'function' ? position.lng() : position.lng,
+      lon: typeof position.lng === 'function' ? position.lng() : position.lng,
     };
   }
 
   setPosition(position: MapCoordinate): void {
-    const naverLatLng = new window.naver.maps.LatLng(position.lat, position.lng);
+    const naverLatLng = new window.naver.maps.LatLng(position.lat, position.lon);
     this.naverMarker.setPosition(naverLatLng);
   }
 

@@ -103,7 +103,7 @@ export class NaverMapService implements IMapService {
         disableDoubleTapZoom?: boolean;
         disableTwoFingerTapZoom?: boolean;
       } = {
-        center: new window.naver.maps.LatLng(options.center.lat, options.center.lng),
+        center: new window.naver.maps.LatLng(options.center.lat, options.center.lon),
         zoom: options.zoom,
         mapTypeId: window.naver.maps.MapTypeId.NORMAL,
         mapDataControl: false,
@@ -159,12 +159,12 @@ export class NaverMapService implements IMapService {
     const center = this.naverMap.getCenter();
     return {
       lat: typeof center.lat === 'function' ? center.lat() : center.lat,
-      lng: typeof center.lng === 'function' ? center.lng() : center.lng,
+      lon: typeof center.lng === 'function' ? center.lng() : center.lng,
     };
   }
 
   setCenter(center: MapCoordinate): void {
-    const naverLatLng = new window.naver.maps.LatLng(center.lat, center.lng);
+    const naverLatLng = new window.naver.maps.LatLng(center.lat, center.lon);
     this.naverMap.setCenter(naverLatLng);
   }
 
@@ -224,7 +224,7 @@ export class NaverMapService implements IMapService {
 
   panTo(position: MapCoordinate): void {
     if (this.naverMap.panTo) {
-      const naverLatLng = new window.naver.maps.LatLng(position.lat, position.lng);
+      const naverLatLng = new window.naver.maps.LatLng(position.lat, position.lon);
       this.naverMap.panTo(naverLatLng);
     }
   }
@@ -239,7 +239,7 @@ export class NaverMapService implements IMapService {
     const markerId = `marker_${++this.markerIdCounter}`;
 
     const naverMarkerOptions: NaverMarkerOptions = {
-      position: new window.naver.maps.LatLng(options.position.lat, options.position.lng),
+      position: new window.naver.maps.LatLng(options.position.lat, options.position.lon),
       map: this.naverMap,
       title: options.title,
       clickable: options.clickable !== false,
@@ -357,7 +357,7 @@ export class NaverMapService implements IMapService {
   coordToPixel(coord: MapCoordinate): { x: number; y: number } {
     if (this.naverMap.getProjection) {
       const projection = this.naverMap.getProjection();
-      const naverLatLng = new window.naver.maps.LatLng(coord.lat, coord.lng);
+      const naverLatLng = new window.naver.maps.LatLng(coord.lat, coord.lon);
       const point = projection.fromCoordToOffset(naverLatLng);
       return { x: point.x, y: point.y };
     }
@@ -371,10 +371,10 @@ export class NaverMapService implements IMapService {
       const naverLatLng = projection.fromOffsetToCoord(point);
       return {
         lat: typeof naverLatLng.lat === 'function' ? naverLatLng.lat() : naverLatLng.lat,
-        lng: typeof naverLatLng.lng === 'function' ? naverLatLng.lng() : naverLatLng.lng,
+        lon: typeof naverLatLng.lng === 'function' ? naverLatLng.lng() : naverLatLng.lng,
       };
     }
-    return { lat: 0, lng: 0 }; // 기본값
+    return { lat: 0, lon: 0 }; // 기본값
   }
 
   // Internal method to access the underlying Naver map

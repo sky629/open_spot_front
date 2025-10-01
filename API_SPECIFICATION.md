@@ -162,8 +162,8 @@ JWT 토큰 유효성 검증
 category: string (optional) - 'all', 'restaurant', 'cafe', 'shopping', 'park'
 groupId: string (optional) - 특정 그룹의 위치만 조회
 bounds: object (optional) - 지도 영역 필터링
-  - northEast: { lat: number, lng: number }
-  - southWest: { lat: number, lng: number }
+  - northEast: { lat: number, lon: number }
+  - southWest: { lat: number, lon: number }
 limit: number (optional, default: 50) - 페이지네이션
 offset: number (optional, default: 0) - 페이지네이션
 ```
