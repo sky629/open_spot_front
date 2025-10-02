@@ -1,15 +1,14 @@
 // Service Registration and DI Container Setup
+// Orval 기반으로 완전 마이그레이션됨
 
 import { container, SERVICE_TOKENS } from '../core/container';
-import { SecureApiClient } from '../services/SecureApiClient';
 import { SecureCookieService } from '../services/SecureCookieService';
 import { AuthServiceImpl } from '../features/auth/services';
 import { LocationService } from '../services';
 import { MapServiceFactory } from '../services/map';
-import { API_CONFIG } from '../constants';
 import { setupStores } from '../stores/setup';
 import { logger } from '../utils/logger';
-import type { ILocationService, IAuthServiceFull, IApiClient } from '../core/interfaces';
+import type { ILocationService, IAuthServiceFull } from '../core/interfaces';
 
 /**
  * 모든 서비스를 DI 컨테이너에 등록합니다
@@ -31,57 +30,28 @@ export const registerServices = (): void => {
       true // 싱글톤
     );
 
-    // 2. API 클라이언트 등록
-    container.register(
-      SERVICE_TOKENS.API_CLIENT,
-      () => new SecureApiClient({
-        baseURL: API_CONFIG.BASE_URL,
-        timeout: API_CONFIG.TIMEOUT,
-        withCredentials: true,
-        csrf: {
-          headerName: 'X-CSRF-Token',
-          cookieName: 'open_spot_csrf_token',
-          enabled: true
-        }
-      }),
-      true // 싱글톤
-    );
-
-    // 3. 인증 서비스 등록
+    // 2. 인증 서비스 등록 (Orval 기반 - API 클라이언트 주입 불필요)
     container.register(
       SERVICE_TOKENS.AUTH_SERVICE,
-      () => {
-        const authService = new AuthServiceImpl();
-        const apiClient = container.resolve(SERVICE_TOKENS.API_CLIENT) as IApiClient;
-
-        // 인증 서비스에 API 클라이언트 주입
-        authService.setApiClient(apiClient);
-
-        // API 클라이언트에 인증 서비스 주입 (순환 참조 해결)
-        if ('setAuthService' in apiClient) {
-          (apiClient as { setAuthService: (service: IAuthServiceFull) => void }).setAuthService(authService);
-        }
-
-        return authService;
-      },
+      () => new AuthServiceImpl(),
       true // 싱글톤
     );
 
-    // 4. 위치 서비스 등록 (인스턴스로 등록)
+    // 3. 위치 서비스 등록 (Orval 기반)
     container.register(
       SERVICE_TOKENS.LOCATION_SERVICE,
       () => new LocationService(),
       true // 싱글톤
     );
 
-    // 5. 맵 서비스 팩토리 등록
+    // 4. 맵 서비스 팩토리 등록
     container.register(
       SERVICE_TOKENS.MAP_SERVICE_FACTORY,
       () => MapServiceFactory.getInstance(),
       true // 싱글톤
     );
 
-    // 6. 로거 등록 (기존 logger 인스턴스 재사용)
+    // 5. 로거 등록 (기존 logger 인스턴스 재사용)
     container.register(
       SERVICE_TOKENS.LOGGER,
       () => logger,
@@ -89,7 +59,7 @@ export const registerServices = (): void => {
     );
 
     isServiceRegistered = true;
-    logger.info('✅ All services registered successfully');
+    logger.info('✅ All services registered successfully (Orval-based)');
 
     // 개발 모드에서 컨테이너 상태 로깅
     if (import.meta.env.DEV) {
@@ -150,25 +120,18 @@ export const initializeApplication = async (): Promise<void> => {
     // 2. 스토어 설정
     configureStores();
 
-    // 3. 인증 서비스 자동 로그인 시도
+    // 3. 인증 서비스 자동 로그인 시도 (HttpOnly Cookie 유효성 확인)
     const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE) as IAuthServiceFull;
     const autoLoginSuccessful = await (authService as IAuthServiceFull & { attemptAutoLogin?: () => Promise<boolean> }).attemptAutoLogin?.();
 
     if (autoLoginSuccessful) {
-      // 자동 로그인 성공 시 Zustand 스토어에도 사용자 정보 설정
-      const savedUser = authService.getUser();
-      if (savedUser) {
-        // 동적 import로 순환 참조 방지
-        const { useAuthStore } = await import('../stores/auth');
-        useAuthStore.getState().setUser(savedUser);
-        logger.info('✅ Auto login successful and user data synced to store');
-      }
+      logger.info('✅ Auto login successful - cookie is valid');
     } else {
-      logger.info('ℹ️ No existing authentication found');
+      logger.info('ℹ️ No existing authentication or cookie expired');
     }
 
-    // 4. 자동 토큰 갱신 설정
-    (authService as IAuthServiceFull & { setupAutoTokenRefresh?: () => void }).setupAutoTokenRefresh?.();
+    // HttpOnly Cookie 방식에서는 자동 토큰 갱신 불필요
+    // 백엔드가 API 응답마다 Set-Cookie로 자동 갱신함
 
     logger.info('🎉 Application initialized successfully');
 
@@ -203,7 +166,6 @@ export const cleanupApplication = (): void => {
  * 서비스 인스턴스를 가져오는 헬퍼 함수들
  */
 export const getAuthService = () => container.resolve(SERVICE_TOKENS.AUTH_SERVICE);
-export const getApiClient = () => container.resolve(SERVICE_TOKENS.API_CLIENT);
 export const getLocationService = (): ILocationService => container.resolve(SERVICE_TOKENS.LOCATION_SERVICE) as ILocationService;
 export const getCookieService = () => container.resolve(SERVICE_TOKENS.COOKIE_SERVICE);
 export const getMapServiceFactory = () => container.resolve(SERVICE_TOKENS.MAP_SERVICE_FACTORY);

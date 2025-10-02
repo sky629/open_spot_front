@@ -5,6 +5,7 @@ import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { LoginForm } from '../components';
 import { useIsAuthenticated, useAuthStore } from '../../../stores/auth';
+import { useAuth } from '../../../hooks/useAuth';
 import { LoginErrorCode } from '../types';
 import { logger } from '../../../utils/logger';
 
@@ -13,20 +14,26 @@ export const LoginPage: React.FC = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const isAuthenticated = useIsAuthenticated();
+  const { refreshUser } = useAuth();
 
   // OAuth 콜백 상태 관리 (간소화)
   const isProcessedRef = useRef(false);
 
-  // URL 파라미터에서 토큰 확인하여 OAuth 콜백인지 판단
+  // URL 파라미터로 OAuth 콜백 판단 (token 또는 new_user 파라미터)
   const token = searchParams.get('token');
-  const isOAuthCallback = !!token;
+  const newUser = searchParams.get('new_user');
+  const isOAuthCallback = !!(token || newUser !== null);
 
-  // OAuth 콜백 처리 로직 (NewAuthCallbackPage에서 이동)
-  const handleAuthCallback = useCallback(async () => {
-    if (!token) {
-      return;
+  // URL에서 받은 access_token을 store에 저장
+  useEffect(() => {
+    if (token) {
+      logger.info('Access token received from URL, storing in memory');
+      useAuthStore.getState().setAccessToken(token);
     }
+  }, [token]);
 
+  // OAuth 콜백 처리 로직 (HttpOnly Cookie 기반)
+  const handleAuthCallback = useCallback(async () => {
     if (isProcessedRef.current) {
       return;
     }
@@ -34,12 +41,10 @@ export const LoginPage: React.FC = () => {
     try {
       isProcessedRef.current = true;
 
-      const { setLoading, setError, setUser } = useAuthStore.getState();
+      const { setLoading, setError } = useAuthStore.getState();
       setLoading(true);
       setError(null);
 
-      const refreshToken = searchParams.get('refresh_token');
-      const userParam = searchParams.get('user');
       const error = searchParams.get('error');
       const code = searchParams.get('code');
       const msg = searchParams.get('msg');
@@ -47,17 +52,15 @@ export const LoginPage: React.FC = () => {
 
       logger.info('🔍 OAuth callback processing', {
         hasToken: !!token,
-        hasRefreshToken: !!refreshToken,
-        hasUser: !!userParam,
+        hasNewUser: newUser !== null,
         hasError: !!error,
         hasCode: !!code,
         hasMsg: !!msg,
         hasDetails: !!details
       });
 
-      // 에러 처리 - 서버에서 /login/error로 보내는 파라미터들 확인
+      // 에러 처리
       if (error || code) {
-        // 구체적인 에러 코드가 있으면 /login/error로 리다이렉트
         if (code) {
           const errorParams = new URLSearchParams({
             code,
@@ -67,61 +70,19 @@ export const LoginPage: React.FC = () => {
           navigate(`/login/error?${errorParams.toString()}`, { replace: true });
           return;
         } else {
-          // 레거시 error 파라미터 처리
           throw new Error(`OAuth Error: ${error}`);
         }
       }
 
-      if (!token) {
-        throw new Error('No token provided in callback');
-      }
+      // HttpOnly Cookie는 이미 백엔드 OAuth 리다이렉트 시 Set-Cookie 헤더로 설정됨
+      // token 파라미터는 선택사항 (로그 확인용)
+      // 실제 인증은 HttpOnly 쿠키로 이루어짐
+      logger.info('🔐 HttpOnly cookie already set by backend, fetching user from API...');
 
-      // 사용자 정보 처리
-      if (userParam && userParam !== 'false' && userParam !== 'null') {
-        try {
-          const userData = JSON.parse(decodeURIComponent(userParam));
-          setUser(userData);
-          logger.info('✅ User data set from URL parameter:', userData);
-        } catch (parseError) {
-          logger.error('Failed to parse user data from URL', parseError);
-          throw new Error('사용자 정보를 처리할 수 없습니다.');
-        }
-      } else {
-        // JWT 토큰에서 사용자 정보 추출
+      // 백엔드에서 쿠키 검증 및 사용자 정보 조회
+      await refreshUser();
 
-        try {
-          const tokenParts = token.split('.');
-          if (tokenParts.length !== 3) {
-            throw new Error('Invalid JWT token format');
-          }
-
-          const decodeBase64UTF8 = (str: string) => {
-            try {
-              return new TextDecoder().decode(Uint8Array.from(atob(str), c => c.charCodeAt(0)));
-            } catch {
-              return decodeURIComponent(escape(atob(str)));
-            }
-          };
-
-          const payload = JSON.parse(decodeBase64UTF8(tokenParts[1]));
-
-          const userData = {
-            id: payload.sub,
-            email: payload.email,
-            name: payload.name,
-            socialId: payload.socialId,
-            provider: 'Google' as const,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-
-          setUser(userData);
-          logger.info('✅ User data extracted from JWT and set in store');
-        } catch (jwtError) {
-          logger.error('❌ Failed to decode JWT token:', jwtError);
-          throw new Error('JWT 토큰을 해석할 수 없습니다.');
-        }
-      }
+      logger.info('✅ User authenticated with HttpOnly cookie', { newUser });
 
       logger.userAction('OAuth callback successful, redirecting to map');
 
@@ -134,7 +95,6 @@ export const LoginPage: React.FC = () => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       const { setError, setLoginError, setLoading } = useAuthStore.getState();
 
-      // 기존 error와 새로운 loginError 모두 설정
       setError(errorMessage);
       setLoginError({
         code: LoginErrorCode.AUTH_FAILED,
@@ -151,7 +111,7 @@ export const LoginPage: React.FC = () => {
       const { setLoading } = useAuthStore.getState();
       setLoading(false);
     }
-  }, [searchParams, navigate, token]);
+  }, [searchParams, navigate, token, newUser, refreshUser]);
 
   // OAuth 콜백 처리 useEffect
   useEffect(() => {

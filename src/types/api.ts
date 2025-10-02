@@ -1,5 +1,16 @@
-// API 응답 타입 정의
+// API 타입 정의
+// NOTE: 대부분의 API 타입은 Orval이 자동 생성합니다 (src/api/generated/model/)
+// 여기에는 프론트엔드 호환성을 위한 타입과 Orval이 생성하지 않는 타입만 정의합니다
 
+// Orval 생성 타입 import
+import type {
+  LocationResponse as OrvalLocationResponse,
+} from '../api/generated/model';
+
+// Orval 타입 그대로 re-export
+export type { UserResponse } from '../api/generated/model';
+
+// 공통 API 응답 타입 (Orval ApiResponse와 호환)
 export interface ApiResponse<T> {
   success: boolean;
   data: T;
@@ -7,16 +18,15 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-export interface LocationResponse {
-  id: string;
-  name: string;
+// 프론트엔드 호환 타입 - 기존 코드와의 호환성을 위해 유지
+// Orval 타입을 확장하여 latitude/longitude 접근 가능하도록 함
+export interface LocationResponse extends Omit<OrvalLocationResponse, 'category' | 'coordinates' | 'address' | 'distance'> {
   latitude: number;
   longitude: number;
-  description?: string;
-  category?: string;
-  iconUrl?: string;
-  createdAt: string;
-  updatedAt: string;
+  coordinates: OrvalLocationResponse['coordinates'];
+  category: string; // CategoryInfo 대신 string 사용
+  address?: string; // null을 undefined로 변환
+  distance?: number; // null을 undefined로 변환
 }
 
 export interface CreateLocationRequest {
@@ -34,15 +44,18 @@ export interface UpdateLocationRequest extends Partial<CreateLocationRequest> {
 
 export interface GetLocationsParams {
   category?: string;
+  categoryId?: string;
   bounds?: {
     northEast: { lat: number; lng: number };
     southWest: { lat: number; lng: number };
   };
   limit?: number;
   offset?: number;
+  page?: number;
+  size?: number;
 }
 
-// 인증 관련 타입 정의
+// 프론트엔드 전용 타입 - Orval이 생성하지 않는 타입들
 export interface User {
   id: string;
   email: string;
@@ -54,9 +67,9 @@ export interface User {
 }
 
 export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: string;
+  accessToken?: string;   // HttpOnly Cookie 방식에서는 사용 안 함
+  refreshToken?: string;  // HttpOnly Cookie 방식에서는 사용 안 함
+  expiresAt?: string;     // HttpOnly Cookie 방식에서는 사용 안 함
 }
 
 export interface GoogleLoginRequest {
@@ -65,56 +78,5 @@ export interface GoogleLoginRequest {
 
 export interface GoogleLoginResponse {
   user: User;
-  tokens: AuthTokens;
-}
-
-export interface RefreshTokenRequest {
-  refreshToken: string;
-}
-
-export interface RefreshTokenResponse {
-  accessToken: string;
-  expiresAt: string;
-}
-
-// 분석 서비스 관련 타입 정의
-export interface Store {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  address: string;
-  category: string;
-  businessStatus: 'ACTIVE' | 'INACTIVE' | 'PERMANENTLY_CLOSED';
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Report {
-  id: string;
-  userId: string;
-  title: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-  status: 'PENDING' | 'COMPLETED' | 'FAILED';
-  score?: string; // A-F 등급
-  analysisData?: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CreateReportRequest {
-  title: string;
-  latitude: number;
-  longitude: number;
-  radius: number;
-}
-
-export interface GetStoresParams {
-  lat: number;
-  lon: number;
-  radius: number;
-  page?: number;
-  size?: number;
+  tokens: AuthTokens | null;  // HttpOnly Cookie 방식에서는 null
 }

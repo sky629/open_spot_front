@@ -16,10 +16,10 @@ export interface IAuthService {
   getUserProfile(): Promise<User>;
 
   /**
-   * 토큰 갱신
-   * @returns 새로운 액세스 토큰
+   * 토큰 갱신 (Hybrid 방식)
+   * @returns 새로운 access_token (refresh_token은 HttpOnly Cookie로 자동 처리)
    */
-  refreshAccessToken(): Promise<string>;
+  refreshAccessToken(): Promise<{ access_token: string }>;
 
   /**
    * 로그아웃
@@ -33,38 +33,20 @@ export interface IAuthService {
   isAuthenticated(): boolean;
 
   /**
-   * 토큰 만료 여부 확인
-   * @returns 만료 여부
-   */
-  isTokenExpired(): boolean;
-
-  /**
-   * 인증 헤더 가져오기
+   * 인증 헤더 가져오기 (HttpOnly Cookie 방식에서는 빈 객체 반환)
    * @returns 인증 헤더 객체
    */
-  getAuthHeader(): Record<string, string>;
+  getAuthHeader(): Record<string, never>;
 
   /**
    * 사용자 정보 저장
    * @param user - 사용자 정보
    */
-  setUser(user: User): void;
+  setUser(user: User | null): void;
 
   /**
    * 사용자 정보 가져오기
    * @returns 사용자 정보 또는 null
    */
   getUser(): User | null;
-
-  /**
-   * CSRF 토큰 가져오기
-   * @returns CSRF 토큰 또는 null
-   */
-  getCSRFToken(): string | null;
-
-  /**
-   * CSRF 토큰 설정
-   * @param token - CSRF 토큰
-   */
-  setCSRFToken(token: string): void;
 }

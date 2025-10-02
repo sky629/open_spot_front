@@ -37,6 +37,7 @@ export const setAuthServiceForStore = (service: IAuthService) => {
 
 const initialState = {
   user: null,
+  accessToken: null,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -70,6 +71,20 @@ export const useAuthStore = create<AuthState>()(
             logger.info('User set in store', { userId: user.id });
           } else {
             logger.info('User cleared from store');
+          }
+        },
+
+        setAccessToken: (token: string | null) => {
+          set(() => {
+            return {
+              accessToken: token,
+            };
+          });
+
+          if (token) {
+            logger.info('Access token set in store');
+          } else {
+            logger.info('Access token cleared from store');
           }
         },
 
@@ -337,11 +352,20 @@ export const useAuthStore = create<AuthState>()(
       {
         name: 'auth-store',
         partialize: (state) => ({
-          // persist할 상태만 선택 (민감한 정보 및 런타임 상태 제외)
+          // Hybrid 방식: accessToken과 user를 localStorage에 저장하여 새로고침 시에도 유지
+          // refresh_token은 HttpOnly Cookie로 백엔드에서 관리
+          accessToken: state.accessToken,
           user: state.user,
           isAuthenticated: state.isAuthenticated,
-          // isServiceReady는 persist하지 않음 (매번 앱 시작 시 초기화)
         }),
+        onRehydrateStorage: () => (state) => {
+          if (state) {
+            console.log('🔄 Auth store rehydrated from localStorage', {
+              hasToken: !!state.accessToken,
+              hasUser: !!state.user,
+            });
+          }
+        },
       }
     )
   )

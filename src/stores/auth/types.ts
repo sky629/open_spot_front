@@ -6,6 +6,7 @@ import type { LoginError } from '../../features/auth/types';
 export interface AuthState {
   // 상태
   user: User | null;
+  accessToken: string | null;  // URL 파라미터로 받은 access_token 저장
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -14,6 +15,7 @@ export interface AuthState {
 
   // 액션
   setUser: (user: User | null) => void;
+  setAccessToken: (token: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setLoginError: (error: LoginError | null) => void;

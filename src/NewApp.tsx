@@ -5,6 +5,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ErrorBoundary, LoadingSpinner } from './shared/components';
 import { LoginPage, LoginErrorPage, ProtectedRoute } from './features/auth';
 import { MapPage } from './features/map';
+import { AuthProvider } from './contexts/AuthContext';
 import { initializeApplication, cleanupApplication } from './setup';
 import { logger } from './utils/logger';
 import './App.css';
@@ -141,32 +142,34 @@ export const NewApp: React.FC = () => {
         });
       }}
     >
-      <Router>
-        <div className="App">
-          <Routes>
-            {/* 공개 경로들 */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/login/error" element={<LoginErrorPage />} />
+      <AuthProvider>
+        <Router>
+          <div className="App">
+            <Routes>
+              {/* 공개 경로들 */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/login/error" element={<LoginErrorPage />} />
 
 
-            {/* 보호된 경로들 */}
-            <Route
-              path="/map"
-              element={
-                <ProtectedRoute>
-                  <MapPage />
-                </ProtectedRoute>
-              }
-            />
+              {/* 보호된 경로들 */}
+              <Route
+                path="/map"
+                element={
+                  <ProtectedRoute>
+                    <MapPage />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* 기본 경로 */}
-            <Route path="/" element={<Navigate to="/map" replace />} />
+              {/* 기본 경로 */}
+              <Route path="/" element={<Navigate to="/map" replace />} />
 
-            {/* 404 처리 */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </div>
-      </Router>
+              {/* 404 처리 */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
     </ErrorBoundary>
   );
 };
