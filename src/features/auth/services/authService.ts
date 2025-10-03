@@ -88,8 +88,8 @@ export class AuthService {
       const response = await authApi.refreshToken();
 
       if (response.success && response.data) {
-        // Response body에서 새 access_token 추출 (TokenRefreshResponse 타입에 포함됨)
-        const accessToken = response.data.access_token;
+        // Response body에서 새 accessToken 추출 (camelCase)
+        const accessToken = response.data.accessToken;
         logger.info('Token refreshed successfully, received new access_token');
         return { access_token: accessToken };
       } else {
@@ -97,8 +97,8 @@ export class AuthService {
       }
     } catch (error) {
       logger.error('Token refresh failed', error);
-      // 토큰 갱신 실패 시 로그아웃 처리
-      await this.logout();
+      // logout 호출 제거: 무한 루프 방지 (logout API도 401 에러 발생 가능)
+      // 호출자(AuthContext)에서 적절히 처리하도록 에러만 전파
       throw error;
     }
   }
@@ -138,8 +138,13 @@ export class AuthService {
       await authApi.logout();
       logger.userAction('Logout successful - cookies cleared by server');
     } catch (error) {
-      logger.error('Logout request failed', error);
-      // 서버 요청 실패해도 클라이언트는 user만 제거하면 됨
+      // 401 에러는 이미 인증 실패 상태이므로 정상으로 간주
+      if ((error as { response?: { status: number } }).response?.status === 401) {
+        logger.info('Already unauthenticated, skipping server logout');
+      } else {
+        logger.error('Logout request failed', error);
+      }
+      // 서버 요청 실패 여부와 관계없이 클라이언트 정리는 진행
       logger.warn('Continuing with client-side logout');
     }
   }

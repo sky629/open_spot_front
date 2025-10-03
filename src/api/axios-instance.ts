@@ -110,11 +110,11 @@ axiosInstance.interceptors.response.use(
         console.log('🔄 Access token expired, refreshing...');
 
         // Refresh API 호출 (refresh_token HttpOnly Cookie 자동 전송)
-        const response = await axiosInstance.post<{ access_token: string }>('/api/v1/auth/token/refresh');
+        const response = await axiosInstance.post<{ accessToken: string }>('/api/v1/auth/token/refresh');
 
-        // Response body에서 새 access_token 추출하여 store에 저장
-        if (response.data && response.data.access_token) {
-          useAuthStore.getState().setAccessToken(response.data.access_token);
+        // Response body에서 새 accessToken 추출하여 store에 저장 (camelCase)
+        if (response.data && response.data.accessToken) {
+          useAuthStore.getState().setAccessToken(response.data.accessToken);
           console.log('✅ Token refreshed and stored successfully');
         }
 

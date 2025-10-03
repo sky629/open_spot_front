@@ -50,26 +50,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // 1. Store에 access_token이 있는지 확인
         const accessToken = useAuthStore.getState().accessToken;
 
-        if (accessToken) {
-          // access_token이 있으면 바로 사용자 정보 가져오기
-          try {
-            console.log('🔑 Access token found in store, fetching user profile...');
-            const user = await authService.getUserProfile();
-
-            console.log('✅ User authenticated with access token:', { id: user.id, name: user.name });
-
-            // React Context와 Zustand 모두 업데이트
-            setUser(user);
-            useAuthStore.getState().setUser(user);
-            return;
-          } catch (error) {
-            // access_token이 만료되었거나 유효하지 않음
-            console.log('⚠️ Access token invalid, clearing and attempting refresh...');
-            useAuthStore.getState().setAccessToken(null);
-          }
+        if (!accessToken) {
+          // 토큰이 없으면 미인증 상태로 설정하고 종료 (불필요한 refresh 시도 방지)
+          console.log('ℹ️ No token found, user not authenticated');
+          setUser(null);
+          useAuthStore.getState().setUser(null);
+          return;
         }
 
-        // 2. access_token이 없거나 유효하지 않으면 refresh 시도
+        // 2. access_token이 있으면 검증
+        try {
+          console.log('🔑 Access token found in store, fetching user profile...');
+          const user = await authService.getUserProfile();
+
+          console.log('✅ User authenticated with access token:', { id: user.id, name: user.name });
+
+          // React Context와 Zustand 모두 업데이트
+          setUser(user);
+          useAuthStore.getState().setUser(user);
+          return;
+        } catch (error) {
+          // access_token이 만료되었거나 유효하지 않음 - refresh 시도
+          console.log('⚠️ Access token invalid, attempting refresh...');
+        }
+
+        // 3. access_token 만료 시에만 refresh 시도
         try {
           console.log('🔄 Attempting token refresh with HttpOnly cookie...');
           const response = await authService.refreshAccessToken();
@@ -87,9 +92,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             useAuthStore.getState().setUser(user);
           }
         } catch (error) {
-          // Refresh도 실패 - 정상적인 미인증 상태
-          console.log('ℹ️ No valid authentication, user not authenticated');
-          logger.info('No valid authentication', error);
+          // Refresh 실패 - 정상적인 미인증 상태 (401은 에러가 아님)
+          console.log('ℹ️ Refresh failed, clearing auth state');
 
           // 명시적으로 null 설정 (Zustand도 동기화)
           setUser(null);

@@ -6,12 +6,12 @@
  */
 
 /**
- * 토큰 갱신 응답. access_token은 Response Body에 포함되며, refresh_token은 HttpOnly 쿠키로 전달됩니다.
+ * 토큰 갱신 응답. accessToken은 Response Body에 포함되며, refresh_token은 HttpOnly 쿠키로 전달됩니다.
 
  */
 export interface TokenRefreshResponse {
   /** 새로 발급된 액세스 토큰 */
-  access_token: string;
+  accessToken: string;
   /** 액세스 토큰 만료 시간 (밀리초) */
   accessTokenExpiresIn: number;
   /** 토큰 갱신 성공 메시지 */
