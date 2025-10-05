@@ -2,7 +2,8 @@
 
 import { setAuthServiceForStore } from './auth';
 import { setLocationServiceForStore } from './location';
-import type { IAuthServiceFull, ILocationService } from '../core/interfaces';
+import { setGroupServiceForStore } from './group/groupStore';
+import type { IAuthServiceFull, ILocationService, IGroupService } from '../core/interfaces';
 
 /**
  * 모든 스토어에 서비스 의존성을 주입합니다
@@ -11,12 +12,16 @@ import type { IAuthServiceFull, ILocationService } from '../core/interfaces';
 export const setupStores = (services: {
   authService: IAuthServiceFull;
   locationService: ILocationService;
+  groupService: IGroupService;
 }) => {
   // Auth Store에 서비스 주입
   setAuthServiceForStore(services.authService);
 
   // Location Store에 서비스 주입
   setLocationServiceForStore(services.locationService);
+
+  // Group Store에 서비스 주입
+  setGroupServiceForStore(services.groupService);
 
   console.log('✅ All stores configured with services');
 };
@@ -32,6 +37,7 @@ export const debugStores = () => {
     console.log('Available stores:');
     console.log('- auth-store (Authentication)');
     console.log('- location-store (Locations)');
+    console.log('- group-store (Groups)');
 
     console.log('💡 Use Redux DevTools to inspect store states');
     console.groupEnd();
@@ -49,6 +55,10 @@ export const resetAllStores = () => {
 
   import('./location').then(({ useLocationStore }) => {
     useLocationStore.getState().reset();
+  });
+
+  import('./group').then(({ useGroupStore }) => {
+    useGroupStore.getState().reset?.();
   });
 
   console.log('🔄 All stores reset');

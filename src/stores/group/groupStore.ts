@@ -1,27 +1,39 @@
-// Group Store using Zustand
+// Group Store using Zustand with Backend API Integration
 
 import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import { Group, GroupCreateRequest, GroupUpdateRequest, GroupUIState } from '../../types/group';
 import { logger } from '../../utils/logger';
+import type { IGroupService } from '../../core/interfaces/IGroupService';
+
+// 의존성 주입을 위한 서비스 참조
+let groupService: IGroupService | null = null;
+
+export const setGroupServiceForStore = (service: IGroupService) => {
+  groupService = service;
+  logger.info('✅ Group service injected into store');
+};
 
 interface GroupStore {
   // Data state
   groups: Group[];
   selectedGroupId: string | null;
+  isLoading: boolean;
+  error: string | null;
 
   // UI state
   ui: GroupUIState;
 
   // Group CRUD actions
-  createGroup: (request: GroupCreateRequest) => void;
-  updateGroup: (id: string, request: GroupUpdateRequest) => void;
-  deleteGroup: (id: string) => void;
+  fetchGroups: () => Promise<void>;
+  createGroup: (request: GroupCreateRequest) => Promise<void>;
+  updateGroup: (id: string, request: GroupUpdateRequest) => Promise<void>;
+  deleteGroup: (id: string) => Promise<void>;
   selectGroup: (id: string | null) => void;
 
   // Location management
-  addLocationToGroup: (groupId: string, locationId: string) => void;
-  removeLocationFromGroup: (groupId: string, locationId: string) => void;
+  addLocationToGroup: (groupId: string, locationId: string) => Promise<void>;
+  removeLocationFromGroup: (groupId: string, locationId: string) => Promise<void>;
 
   // UI actions
   setUIState: (state: Partial<GroupUIState>) => void;
@@ -30,6 +42,7 @@ interface GroupStore {
   // Utility
   getGroupById: (id: string) => Group | undefined;
   getGroupsWithLocation: (locationId: string) => Group[];
+  reset: () => void;
 }
 
 const initialUIState: GroupUIState = {
@@ -39,62 +52,131 @@ const initialUIState: GroupUIState = {
   showDeleteConfirm: null,
 };
 
+const initialState = {
+  groups: [],
+  selectedGroupId: null,
+  isLoading: false,
+  error: null,
+  ui: initialUIState,
+};
+
 export const useGroupStore = create<GroupStore>()(
   devtools(
     persist(
       (set, get) => ({
-        // Initial state
-        groups: [],
-        selectedGroupId: null,
-        ui: initialUIState,
+        ...initialState,
+
+        // Fetch all groups from backend
+        fetchGroups: async () => {
+          if (!groupService) {
+            logger.error('Group service not initialized');
+            return;
+          }
+
+          try {
+            set({ isLoading: true, error: null });
+            logger.info('Fetching groups from backend');
+
+            const groups = await groupService.getGroups();
+
+            set({ groups, isLoading: false });
+            logger.info(`Successfully fetched ${groups.length} groups`);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch groups';
+            set({ error: errorMessage, isLoading: false });
+            logger.error('Failed to fetch groups', error);
+          }
+        },
 
         // Group CRUD actions
-        createGroup: (request: GroupCreateRequest) => {
-          const newGroup: Group = {
-            id: `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            name: request.name,
-            color: request.color,
-            locationIds: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
+        createGroup: async (request: GroupCreateRequest) => {
+          if (!groupService) {
+            logger.error('Group service not initialized');
+            return;
+          }
 
-          set((state) => ({
-            groups: [...state.groups, newGroup],
-            ui: { ...state.ui, isCreating: false }
-          }));
+          try {
+            set({ isLoading: true, error: null });
+            logger.info('Creating group', request);
 
-          logger.userAction('Group created', { groupId: newGroup.id, name: newGroup.name });
+            const newGroup = await groupService.createGroup(request);
+
+            set((state) => ({
+              groups: [...state.groups, newGroup],
+              isLoading: false,
+              ui: { ...state.ui, isCreating: false }
+            }));
+
+            logger.userAction('Group created', { groupId: newGroup.id, name: newGroup.name });
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to create group';
+            set({ error: errorMessage, isLoading: false });
+            logger.error('Failed to create group', error);
+            throw error;
+          }
         },
 
-        updateGroup: (id: string, request: GroupUpdateRequest) => {
-          set((state) => ({
-            groups: state.groups.map((group) =>
-              group.id === id
-                ? {
-                    ...group,
-                    ...request,
-                    updatedAt: new Date().toISOString(),
-                  }
-                : group
-            ),
-            ui: { ...state.ui, editingGroupId: null }
-          }));
+        updateGroup: async (id: string, request: GroupUpdateRequest) => {
+          if (!groupService) {
+            logger.error('Group service not initialized');
+            return;
+          }
 
-          logger.userAction('Group updated', { groupId: id, request });
+          try {
+            set({ isLoading: true, error: null });
+            logger.info('Updating group', { groupId: id, request });
+
+            const updatedGroup = await groupService.updateGroup(id, request);
+
+            set((state) => ({
+              groups: state.groups.map((group) =>
+                group.id === id ? updatedGroup : group
+              ),
+              isLoading: false,
+              ui: { ...state.ui, editingGroupId: null }
+            }));
+
+            logger.userAction('Group updated', { groupId: id, request });
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to update group';
+            set({ error: errorMessage, isLoading: false });
+            logger.error('Failed to update group', error);
+            throw error;
+          }
         },
 
-        deleteGroup: (id: string) => {
+        deleteGroup: async (id: string) => {
+          if (!groupService) {
+            logger.error('Group service not initialized');
+            return;
+          }
+
           const group = get().getGroupById(id);
-          if (!group) return;
+          if (!group) {
+            logger.warn('Group not found for deletion', { groupId: id });
+            return;
+          }
 
-          set((state) => ({
-            groups: state.groups.filter((g) => g.id !== id),
-            selectedGroupId: state.selectedGroupId === id ? null : state.selectedGroupId,
-            ui: { ...state.ui, showDeleteConfirm: null }
-          }));
+          try {
+            set({ isLoading: true, error: null });
+            logger.info('Deleting group', { groupId: id });
 
-          logger.userAction('Group deleted', { groupId: id, name: group.name });
+            await groupService.deleteGroup(id);
+
+            set((state) => ({
+              groups: state.groups.filter((g) => g.id !== id),
+              selectedGroupId: state.selectedGroupId === id ? null : state.selectedGroupId,
+              isLoading: false,
+              ui: { ...state.ui, showDeleteConfirm: null }
+            }));
+
+            logger.userAction('Group deleted', { groupId: id, name: group.name });
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to delete group';
+            set({ error: errorMessage, isLoading: false });
+            logger.error('Failed to delete group', error);
+            throw error;
+          }
         },
 
         selectGroup: (id: string | null) => {
@@ -103,36 +185,60 @@ export const useGroupStore = create<GroupStore>()(
         },
 
         // Location management
-        addLocationToGroup: (groupId: string, locationId: string) => {
-          set((state) => ({
-            groups: state.groups.map((group) =>
-              group.id === groupId && !group.locationIds.includes(locationId)
-                ? {
-                    ...group,
-                    locationIds: [...group.locationIds, locationId],
-                    updatedAt: new Date().toISOString(),
-                  }
-                : group
-            )
-          }));
+        addLocationToGroup: async (groupId: string, locationId: string) => {
+          if (!groupService) {
+            logger.error('Group service not initialized');
+            return;
+          }
 
-          logger.userAction('Location added to group', { groupId, locationId });
+          try {
+            set({ isLoading: true, error: null });
+            logger.info('Adding location to group', { groupId, locationId });
+
+            const updatedGroup = await groupService.addLocationToGroup(groupId, locationId);
+
+            set((state) => ({
+              groups: state.groups.map((group) =>
+                group.id === groupId ? updatedGroup : group
+              ),
+              isLoading: false
+            }));
+
+            logger.userAction('Location added to group', { groupId, locationId });
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to add location to group';
+            set({ error: errorMessage, isLoading: false });
+            logger.error('Failed to add location to group', error);
+            throw error;
+          }
         },
 
-        removeLocationFromGroup: (groupId: string, locationId: string) => {
-          set((state) => ({
-            groups: state.groups.map((group) =>
-              group.id === groupId
-                ? {
-                    ...group,
-                    locationIds: group.locationIds.filter(id => id !== locationId),
-                    updatedAt: new Date().toISOString(),
-                  }
-                : group
-            )
-          }));
+        removeLocationFromGroup: async (groupId: string, locationId: string) => {
+          if (!groupService) {
+            logger.error('Group service not initialized');
+            return;
+          }
 
-          logger.userAction('Location removed from group', { groupId, locationId });
+          try {
+            set({ isLoading: true, error: null });
+            logger.info('Removing location from group', { groupId, locationId });
+
+            const updatedGroup = await groupService.removeLocationFromGroup(groupId, locationId);
+
+            set((state) => ({
+              groups: state.groups.map((group) =>
+                group.id === groupId ? updatedGroup : group
+              ),
+              isLoading: false
+            }));
+
+            logger.userAction('Location removed from group', { groupId, locationId });
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to remove location from group';
+            set({ error: errorMessage, isLoading: false });
+            logger.error('Failed to remove location from group', error);
+            throw error;
+          }
         },
 
         // UI actions
@@ -155,6 +261,11 @@ export const useGroupStore = create<GroupStore>()(
           return get().groups.filter(group =>
             group.locationIds.includes(locationId)
           );
+        },
+
+        reset: () => {
+          set(initialState);
+          logger.info('Group store reset');
         },
       }),
       {
@@ -179,3 +290,5 @@ export const useSelectedGroup = () => {
   return selectedGroupId ? getGroupById(selectedGroupId) : null;
 };
 export const useGroupUIState = () => useGroupStore(state => state.ui);
+export const useGroupsLoading = () => useGroupStore(state => state.isLoading);
+export const useGroupsError = () => useGroupStore(state => state.error);

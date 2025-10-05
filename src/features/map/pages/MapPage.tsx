@@ -10,6 +10,7 @@ import { GroupSection } from '../../../components/Sidebar/GroupSection';
 import { LocationSection } from '../../../components/Sidebar/LocationSection';
 import { useUser } from '../../../stores/auth';
 import { useSelectedLocation } from '../../../stores/location';
+import { useGroupStore } from '../../../stores/group';
 import { logger } from '../../../utils/logger';
 import { colors, media, transitions, shadows } from '../../../styles';
 import type { LocationResponse } from '../../../types';
@@ -18,10 +19,11 @@ export const MapPage: React.FC = () => {
   console.log('🚀 MapPage component rendering...');
 
   const navigate = useNavigate();
-  const user = useUser(); 
+  const user = useUser();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const selectedLocation = useSelectedLocation();
+  const fetchGroups = useGroupStore((state) => state.fetchGroups);
 
   useEffect(() => {
     // 만약 사용자 정보가 없다면 (로그인되지 않은 상태라면)
@@ -30,7 +32,17 @@ export const MapPage: React.FC = () => {
       // /login 페이지로 리디렉션시킵니다.
       navigate('/login');
     }
-  }, [user, navigate]); 
+  }, [user, navigate]);
+
+  // 초기 그룹 데이터 로딩
+  useEffect(() => {
+    if (user) {
+      logger.info('Loading groups for authenticated user');
+      fetchGroups().catch((error) => {
+        logger.error('Failed to load groups', error);
+      });
+    }
+  }, [user, fetchGroups]); 
 
   console.log('🚀 MapPage - selectedLocation:', selectedLocation);
 
