@@ -15,7 +15,13 @@ import { customAxiosInstance } from '../../axios-instance';
 
   export const getUsers = () => {
 /**
- * JWT 토큰을 통해 현재 로그인한 사용자의 프로필을 조회합니다.
+ * Gateway에서 검증된 JWT의 사용자 ID로 프로필을 조회합니다.
+
+**인증 플로우**:
+1. 클라이언트 → Gateway: `Authorization: Bearer <token>`
+2. Gateway: JWT 검증 후 X-User-Id 헤더 추가
+3. Auth Service: X-User-Id 헤더로 사용자 식별
+
  * @summary 현재 사용자 프로필 조회
  */
 const getCurrentUser = (
@@ -27,7 +33,7 @@ const getCurrentUser = (
       );
     }
   /**
- * 특정 사용자 ID로 프로필을 조회합니다.
+ * 특정 사용자 ID로 프로필을 조회합니다. (관리자 또는 친구 기능용)
  * @summary 사용자 프로필 조회
  */
 const getUserById = (

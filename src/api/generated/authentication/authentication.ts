@@ -5,6 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
+  GoogleLoginParams,
   Logout200,
   RefreshToken200
 } from '.././model';
@@ -16,21 +17,39 @@ import { customAxiosInstance } from '../../axios-instance';
   export const getAuthentication = () => {
 /**
  * Google OAuth2 로그인 플로우를 시작합니다.
-로그인 성공 시 프론트엔드로 리다이렉트하며, JWT 토큰이 HttpOnly 쿠키로 설정됩니다.
+로그인 성공 시 프론트엔드로 리다이렉트하며, Access Token은 URL 쿼리 파라미터로, Refresh Token은 HttpOnly 쿠키로 전달됩니다.
+
+**리다이렉트 예시**:
+`http://localhost:3000/auth/login/success?access_token=eyJhbGc...&new_user=false`
+
+**프론트엔드 처리**:
+1. URL 쿼리에서 `access_token` 추출
+2. 메모리 또는 localStorage에 저장
+3. 이후 API 요청 시 `Authorization: Bearer <access_token>` 헤더 사용
 
  * @summary Google OAuth2 로그인 시작
  */
 const googleLogin = (
-    
+    params?: GoogleLoginParams,
  ) => {
       return customAxiosInstance<unknown>(
-      {url: `/api/v1/auth/google/login`, method: 'GET'
+      {url: `/api/v1/auth/google/login`, method: 'GET',
+        params
     },
       );
     }
   /**
- * HttpOnly 쿠키의 Refresh 토큰을 사용하여 새로운 Access 토큰을 발급받습니다.
-갱신된 토큰은 응답 본문과 함께 HttpOnly 쿠키로도 설정됩니다.
+ * HttpOnly 쿠키의 Refresh Token을 사용하여 새로운 Access Token을 발급받습니다.
+
+**요청**: Refresh Token은 자동으로 쿠키에서 읽힘
+**응답**:
+- Access Token: Response Body (프론트엔드에서 메모리 저장)
+- Refresh Token: HttpOnly Cookie (자동 갱신)
+
+**프론트엔드 처리**:
+1. Response Body에서 `accessToken` 추출
+2. 메모리 또는 localStorage에 저장
+3. 이후 API 요청 시 `Authorization: Bearer <accessToken>` 헤더 사용
 
  * @summary JWT 토큰 갱신
  */
@@ -43,8 +62,11 @@ const refreshToken = (
       );
     }
   /**
- * HttpOnly 쿠키의 토큰을 무효화하여 로그아웃합니다.
-로그아웃 성공 시 쿠키가 삭제됩니다.
+ * Bearer Token을 검증하고 Redis의 Refresh Token을 무효화합니다.
+HttpOnly Cookie의 Refresh Token도 삭제됩니다.
+
+**요청**: `Authorization: Bearer <access-token>` 헤더 필요
+**응답**: Refresh Token 쿠키 삭제
 
  * @summary 로그아웃
  */

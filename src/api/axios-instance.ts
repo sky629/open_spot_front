@@ -21,14 +21,22 @@ axiosInstance.interceptors.request.use(
     // access_token이 있으면 Authorization 헤더 추가
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
+      console.log('🔵 [Hybrid Token] API Request with Bearer token:', {
+        url: config.url,
+        method: config.method,
+        tokenPreview: accessToken.substring(0, 30) + '...' + accessToken.substring(accessToken.length - 30),
+        authHeader: config.headers.Authorization.substring(0, 50) + '...',
+      });
+    } else {
+      console.log('🔵 API Request (no token):', {
+        url: config.url,
+        method: config.method,
+      });
     }
 
-    console.log('🔵 API Request:', {
-      url: config.url,
-      method: config.method,
-      withCredentials: config.withCredentials,
-      hasAuthHeader: !!config.headers.Authorization,
-      headers: config.headers,
+    console.log('🔵 Request Headers:', {
+      ...config.headers,
+      Authorization: config.headers.Authorization ? '[PRESENT]' : '[MISSING]',
     });
 
     return config;
@@ -75,8 +83,26 @@ axiosInstance.interceptors.response.use(
     console.error('🔴 API Error:', {
       url: error.config?.url,
       status: error.response?.status,
+      statusText: error.response?.statusText,
       message: error.message,
+      responseData: error.response?.data,
+      responseHeaders: error.response?.headers,
+      requestHeaders: error.config?.headers,
     });
+
+    // 401 상세 분석
+    if (error.response?.status === 401) {
+      console.error('🔴 [401 Unauthorized] Details:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        sentAuthHeader: error.config?.headers?.Authorization ? 'YES' : 'NO',
+        authHeaderPreview: error.config?.headers?.Authorization ?
+          error.config.headers.Authorization.substring(0, 50) + '...' :
+          'N/A',
+        backendResponse: error.response?.data,
+        backendMessage: error.response?.data?.message || error.response?.statusText,
+      });
+    }
 
     // 401 Unauthorized 에러이고, refresh 재시도가 아닌 경우
     if (error.response?.status === 401 && !originalRequest._retry) {

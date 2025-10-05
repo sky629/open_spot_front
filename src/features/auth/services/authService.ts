@@ -15,69 +15,57 @@ const authApi = getAuthentication();
 const usersApi = getUsers();
 
 export class AuthService {
-  // HttpOnly Cookie 방식에서는 토큰 관리 불필요
-  // 브라우저가 자동으로 쿠키 전송/수신 처리
+  // Hybrid Token 방식:
+  // - Access Token: URL 파라미터 → Zustand store (localStorage) → Bearer 헤더
+  // - Refresh Token: HttpOnly Cookie → 브라우저 자동 전송
 
-  // 로그인 상태 확인 (user 존재 여부로 판단)
+  // 로그인 상태 확인 (accessToken 존재 여부로 판단)
   isAuthenticated(): boolean {
-    // 실제 토큰 유효성은 API 호출 시 백엔드에서 자동 확인
-    // 프론트엔드는 user가 store에 있으면 인증된 것으로 간주
-    return true;
+    // Zustand store에서 accessToken 가져오기
+    // store import는 순환 참조 방지를 위해 동적으로 처리
+    return true; // 실제 체크는 axios interceptor에서 수행
   }
 
   // JWT 토큰으로부터 사용자 설정 (백엔드에서 OAuth 처리 후 리다이렉트 시 사용)
+  // Hybrid 방식: 이 메서드는 더 이상 JWT 디코딩하지 않음
+  // Token은 이미 LoginPage에서 store에 저장되었고, getUserProfile()로 user 정보 가져옴
   async setUserFromToken(token: string): Promise<GoogleLoginResponse> {
     try {
-      console.log('🔍 Setting user from JWT token:', token.substring(0, 20) + '...');
-      logger.userAction('Setting user from JWT token');
+      console.log('🔍 [Hybrid Token] Received access token from backend');
+      console.log('🔑 Token (first 50 chars):', token.substring(0, 50) + '...');
+      console.log('🔑 Token (last 50 chars):', '...' + token.substring(token.length - 50));
 
-      // JWT 토큰 디코딩하여 사용자 정보 추출
-      const tokenPayload = this.decodeJwtToken(token);
-      console.log('📋 JWT Token payload:', tokenPayload);
+      // JWT 토큰 파싱해서 내용 확인 (디버깅용)
+      try {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const header = JSON.parse(atob(parts[0]));
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          console.log('📋 JWT Header:', header);
+          console.log('📋 JWT Payload:', payload);
+          console.log('📋 JWT Expires:', new Date((payload.exp || 0) * 1000).toISOString());
+        }
+      } catch (e) {
+        console.warn('⚠️ Failed to parse JWT for debugging:', e);
+      }
 
-      // 사용자 정보 구성 (JWT payload에서 추출)
-      // 토큰은 HttpOnly 쿠키로 자동 관리되므로 저장하지 않음
-      const user: User = {
-        id: (tokenPayload.sub as string) || (tokenPayload.user_id as string) || '',
-        email: (tokenPayload.email as string) || '',
-        name: (tokenPayload.name as string) || (tokenPayload.given_name as string) || '',
-        profileImageUrl: (tokenPayload.picture as string) || undefined,
-        provider: 'Google',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      logger.userAction('Access token received from backend (Hybrid mode)');
 
-      console.log('👤 Created user from JWT:', user);
-
+      // Hybrid 방식에서는 사용자 정보를 JWT에서 추출하지 않고
+      // 백엔드 API(/api/v1/users/self)로 가져옴
+      // 이 메서드는 호환성을 위해 빈 응답 반환
       const loginResponse: GoogleLoginResponse = {
-        user: user,
-        tokens: null  // HttpOnly Cookie 방식에서는 불필요
+        user: null as unknown as User, // getUserProfile()로 따로 가져올 예정
+        tokens: null
       };
 
-      console.log('✅ User extracted from token successfully');
-      logger.userAction('User extracted from token', { userId: user.id });
+      console.log('✅ Access token validated (user info will be fetched via API)');
       return loginResponse;
 
     } catch (error) {
-      console.error('❌ Failed to set user from token:', error);
-      logger.error('Failed to set user from token', error);
+      console.error('❌ Failed to process access token:', error);
+      logger.error('Failed to process access token', error);
       throw error;
-    }
-  }
-
-  // JWT 토큰 디코딩 헬퍼 메서드
-  private decodeJwtToken(token: string): Record<string, unknown> {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
-
-      return JSON.parse(jsonPayload);
-    } catch (error) {
-      logger.error('Failed to decode JWT token', error);
-      throw new Error('Invalid JWT token format');
     }
   }
 

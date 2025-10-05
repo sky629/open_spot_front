@@ -24,15 +24,7 @@ export const LoginPage: React.FC = () => {
   const newUser = searchParams.get('new_user');
   const isOAuthCallback = !!(token || newUser !== null);
 
-  // URL에서 받은 access_token을 store에 저장
-  useEffect(() => {
-    if (token) {
-      logger.info('Access token received from URL, storing in memory');
-      useAuthStore.getState().setAccessToken(token);
-    }
-  }, [token]);
-
-  // OAuth 콜백 처리 로직 (HttpOnly Cookie 기반)
+  // OAuth 콜백 처리 로직 (Hybrid Token 방식)
   const handleAuthCallback = useCallback(async () => {
     if (isProcessedRef.current) {
       return;
@@ -74,12 +66,17 @@ export const LoginPage: React.FC = () => {
         }
       }
 
-      // HttpOnly Cookie는 이미 백엔드 OAuth 리다이렉트 시 Set-Cookie 헤더로 설정됨
-      // token 파라미터는 선택사항 (로그 확인용)
-      // 실제 인증은 HttpOnly 쿠키로 이루어짐
-      logger.info('🔐 HttpOnly cookie already set by backend, fetching user from API...');
+      // 1. URL 파라미터의 access_token을 store에 저장 (동기 처리)
+      if (token) {
+        logger.info('Access token received from URL, storing in memory');
+        useAuthStore.getState().setAccessToken(token);
+      }
 
-      // 백엔드에서 쿠키 검증 및 사용자 정보 조회
+      // 2. refresh_token은 HttpOnly Cookie로 자동 설정됨
+      // 3. 이제 store에 access_token이 있으므로 사용자 정보 조회 가능
+      logger.info('🔐 Access token stored, fetching user from API...');
+
+      // 백엔드에서 access_token 검증 및 사용자 정보 조회
       await refreshUser();
 
       logger.info('✅ User authenticated with HttpOnly cookie', { newUser });

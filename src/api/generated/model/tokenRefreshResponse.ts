@@ -6,11 +6,13 @@
  */
 
 /**
- * 토큰 갱신 응답. accessToken은 Response Body에 포함되며, refresh_token은 HttpOnly 쿠키로 전달됩니다.
+ * 토큰 갱신 응답.
+- Access Token: Response Body (프론트엔드에서 메모리/localStorage 저장)
+- Refresh Token: HttpOnly Cookie (자동 갱신)
 
  */
 export interface TokenRefreshResponse {
-  /** 새로 발급된 액세스 토큰 */
+  /** 새로 발급된 JWT Access Token (프론트엔드 메모리에 저장) */
   accessToken: string;
   /** 액세스 토큰 만료 시간 (밀리초) */
   accessTokenExpiresIn: number;

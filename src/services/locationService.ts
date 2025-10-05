@@ -35,7 +35,10 @@ export class LocationService implements ILocationService {
       const response = await locationsApi.getLocations(params as ApiGetLocationsParams);
 
       if (response.success && response.data) {
-        const locations = response.data as unknown as LocationResponse[];
+        // 백엔드가 페이지네이션 응답을 반환: { content: [], page: {} }
+        // content 배열을 추출
+        const data = response.data as unknown as { content?: LocationResponse[]; page?: unknown };
+        const locations = data.content || [];
         logger.info(`Successfully fetched ${locations.length} locations`);
         return locations;
       } else {
