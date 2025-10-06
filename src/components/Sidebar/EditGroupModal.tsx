@@ -80,7 +80,7 @@ export const EditGroupModal: React.FC = () => {
             <InfoSection>
               <InfoItem>
                 <InfoLabel>포함된 장소:</InfoLabel>
-                <InfoValue>{group.locationIds.length}개</InfoValue>
+                <InfoValue>{group.locationIds?.length ?? 0}개</InfoValue>
               </InfoItem>
               <InfoItem>
                 <InfoLabel>생성일:</InfoLabel>

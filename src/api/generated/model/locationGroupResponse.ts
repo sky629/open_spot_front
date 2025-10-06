@@ -15,7 +15,7 @@ export interface LocationGroupResponse {
   color?: string | null;
   /** @nullable */
   icon?: string | null;
-  order: number;
+  displayOrder: number;
   isShared: boolean;
   createdAt: string;
   updatedAt: string;

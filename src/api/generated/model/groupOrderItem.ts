@@ -8,5 +8,5 @@
 export interface GroupOrderItem {
   groupId: string;
   /** @minimum 0 */
-  order: number;
+  displayOrder: number;
 }

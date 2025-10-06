@@ -187,7 +187,7 @@ export class GroupService implements IGroupService {
       const response = await groupsApi.reorderLocationGroups({
         groups: groupOrders.map(g => ({
           groupId: g.groupId,
-          order: g.order,
+          displayOrder: g.order, // OpenAPI 스펙에 맞게 displayOrder 사용
         })),
       });
 

@@ -45,7 +45,7 @@ export const GroupSection: React.FC = () => {
             <GroupInfo>
               <GroupColorDot $color={group.color} />
               <GroupName>{group.name}</GroupName>
-              <LocationCount>({group.locationIds.length})</LocationCount>
+              <LocationCount>({group.locationIds?.length ?? 0})</LocationCount>
             </GroupInfo>
 
             <GroupMenu

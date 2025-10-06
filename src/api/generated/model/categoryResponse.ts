@@ -18,5 +18,5 @@ export interface CategoryResponse {
    * @pattern ^#[0-9A-Fa-f]{6}$
    */
   color?: string | null;
-  order: number;
+  displayOrder: number;
 }

@@ -35,10 +35,10 @@ export const DeleteConfirmDialog: React.FC = () => {
             정말로 <GroupName>"{group.name}"</GroupName> 그룹을 삭제하시겠습니까?
           </Message>
 
-          {group.locationIds.length > 0 && (
+          {(group.locationIds?.length ?? 0) > 0 && (
             <WarningSection>
               <WarningText>
-                이 그룹에는 <LocationCount>{group.locationIds.length}개</LocationCount>의 장소가 포함되어 있습니다.
+                이 그룹에는 <LocationCount>{group.locationIds?.length ?? 0}개</LocationCount>의 장소가 포함되어 있습니다.
               </WarningText>
               <WarningSubText>
                 그룹을 삭제해도 장소는 삭제되지 않으며, 다른 그룹에서 계속 확인할 수 있습니다.

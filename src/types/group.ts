@@ -3,7 +3,7 @@
 export interface Group {
   id: string;
   name: string;
-  locationIds: string[];
+  locationIds?: string[]; // Optional: may not be included in API response
   color?: string;
   createdAt: string;
   updatedAt: string;
