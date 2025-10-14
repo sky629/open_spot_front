@@ -5,7 +5,4 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface ChangeLocationGroupRequest {
-  /** @nullable */
-  groupId?: string | null;
-}
+export type GroupIdParamParameter = string;

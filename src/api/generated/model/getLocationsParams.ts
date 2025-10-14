@@ -12,7 +12,9 @@ import type { LatitudeParamParameter } from './latitudeParamParameter';
 import type { LongitudeParamParameter } from './longitudeParamParameter';
 import type { RadiusMetersParamParameter } from './radiusMetersParamParameter';
 import type { CategoryIdParamParameter } from './categoryIdParamParameter';
+import type { GroupIdParamParameter } from './groupIdParamParameter';
 import type { KeywordParamParameter } from './keywordParamParameter';
+import type { SortByParamParameter } from './sortByParamParameter';
 import type { TargetUserIdParamParameter } from './targetUserIdParamParameter';
 import type { PageParamParameter } from './pageParamParameter';
 import type { SizeParamParameter } from './sizeParamParameter';
@@ -54,10 +56,18 @@ longitude?: LongitudeParamParameter;
  */
 radiusMeters?: RadiusMetersParamParameter;
 categoryId?: CategoryIdParamParameter;
+groupId?: GroupIdParamParameter;
 /**
  * @maxLength 100
  */
 keyword?: KeywordParamParameter;
+/**
+ * 정렬 기준 (기본 조회 시에만 적용)
+- RATING: 평점 높은 순
+- CREATED_AT: 최근 등록순 (기본값)
+
+ */
+sortBy?: SortByParamParameter;
 targetUserId?: TargetUserIdParamParameter;
 /**
  * @minimum 0

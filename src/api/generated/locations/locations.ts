@@ -5,27 +5,15 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {
-  ChangeLocationGroup200,
-  ChangeLocationGroupRequest,
   CreateLocation201,
   CreateLocationRequest,
   DeleteLocation200,
   GetLocationById200,
   GetLocations200,
-  GetLocationsByGroup200,
-  GetLocationsByGroupParams,
   GetLocationsParams,
   GetMyLocations200,
   GetMyLocationsParams,
-  GetRecentLocations200,
-  GetRecentLocationsParams,
-  GetTopRatedLocations200,
-  GetTopRatedLocationsParams,
   UpdateLocation200,
-  UpdateLocationCoordinates200,
-  UpdateLocationCoordinatesRequest,
-  UpdateLocationEvaluation200,
-  UpdateLocationEvaluationRequest,
   UpdateLocationRequest
 } from '.././model';
 
@@ -35,8 +23,16 @@ import { customAxiosInstance } from '../../axios-instance';
 
   export const getLocations = () => {
 /**
- * 다양한 조건으로 장소를 검색합니다.
- * @summary 장소 목록 조회
+ * 다양한 조건으로 장소를 조회합니다.
+- bounds 파라미터: 지도 영역 내 검색 (우선순위 1, groupId 함께 사용 가능)
+- radius 파라미터: 반경 검색 (우선순위 2, groupId 함께 사용 가능)
+- groupId: 그룹 필터 (우선순위 3, 기본 정렬: createdAt)
+- categoryId: 카테고리 필터 (우선순위 4, 기본 정렬: createdAt)
+- keyword: 키워드 검색 (우선순위 5, 기본 정렬: 관련도)
+- sortBy: 정렬 기준 (기본 조회 시에만 적용, RATING 또는 CREATED_AT)
+- targetUserId: 조회할 사용자 (미지정 시 본인, 어드민/친구 기능용)
+
+ * @summary 장소 목록 조회 (어드민/일반 공용)
  */
 const getLocations = (
     params?: GetLocationsParams,
@@ -74,8 +70,16 @@ const getLocationById = (
       );
     }
   /**
- * 장소의 기본 정보를 수정합니다.
- * @summary 장소 기본 정보 수정
+ * 장소의 모든 정보를 통합하여 수정합니다 (부분 업데이트 지원).
+제공된 필드만 업데이트되며, null인 필드는 기존 값을 유지합니다.
+
+수정 가능한 정보:
+- 기본 정보: name, description, address, categoryId, iconUrl
+- 평가 정보: rating, review, tags
+- 그룹: groupId
+- 좌표: coordinates (latitude, longitude는 함께 업데이트됨)
+
+ * @summary 장소 정보 통합 수정
  */
 const updateLocation = (
     locationId: string,
@@ -101,79 +105,11 @@ const deleteLocation = (
       );
     }
   /**
- * 장소에 대한 개인 평점, 리뷰, 태그를 수정합니다.
- * @summary 개인 평가 정보 수정
- */
-const updateLocationEvaluation = (
-    locationId: string,
-    updateLocationEvaluationRequest: UpdateLocationEvaluationRequest,
- ) => {
-      return customAxiosInstance<UpdateLocationEvaluation200>(
-      {url: `/api/v1/locations/${locationId}/evaluation`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: updateLocationEvaluationRequest
-    },
-      );
-    }
-  /**
- * 장소가 속한 그룹을 변경합니다.
- * @summary 장소 그룹 변경
- */
-const changeLocationGroup = (
-    locationId: string,
-    changeLocationGroupRequest: ChangeLocationGroupRequest,
- ) => {
-      return customAxiosInstance<ChangeLocationGroup200>(
-      {url: `/api/v1/locations/${locationId}/group`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: changeLocationGroupRequest
-    },
-      );
-    }
-  /**
- * 장소의 GPS 좌표를 수정합니다.
- * @summary 장소 좌표 수정
- */
-const updateLocationCoordinates = (
-    locationId: string,
-    updateLocationCoordinatesRequest: UpdateLocationCoordinatesRequest,
- ) => {
-      return customAxiosInstance<UpdateLocationCoordinates200>(
-      {url: `/api/v1/locations/${locationId}/coordinates`, method: 'PUT',
-      headers: {'Content-Type': 'application/json', },
-      data: updateLocationCoordinatesRequest
-    },
-      );
-    }
-  /**
- * 내 개인 평점 기준 최고 평점 장소 목록을 조회합니다.
- * @summary 최고 평점 장소 목록
- */
-const getTopRatedLocations = (
-    params?: GetTopRatedLocationsParams,
- ) => {
-      return customAxiosInstance<GetTopRatedLocations200>(
-      {url: `/api/v1/locations/top-rated`, method: 'GET',
-        params
-    },
-      );
-    }
-  /**
- * 최근 등록한 내 장소 목록을 조회합니다.
- * @summary 최근 등록 장소 목록
- */
-const getRecentLocations = (
-    params?: GetRecentLocationsParams,
- ) => {
-      return customAxiosInstance<GetRecentLocations200>(
-      {url: `/api/v1/locations/recent`, method: 'GET',
-        params
-    },
-      );
-    }
-  /**
  * 내가 생성한 모든 장소 목록을 조회합니다.
- * @summary 내 장소 목록
+- sortBy: 정렬 기준 (RATING: 평점순, CREATED_AT: 최근 등록순, 기본값: CREATED_AT)
+- 본인의 장소만 조회 가능 (X-User-Id 자동 사용)
+
+ * @summary 내 장소 목록 (일반 사용자용)
  */
 const getMyLocations = (
     params?: GetMyLocationsParams,
@@ -184,30 +120,10 @@ const getMyLocations = (
     },
       );
     }
-  /**
- * 특정 그룹에 속한 내 장소 목록을 조회합니다.
- * @summary 그룹별 장소 목록
- */
-const getLocationsByGroup = (
-    groupId: string | null,
-    params?: GetLocationsByGroupParams,
- ) => {
-      return customAxiosInstance<GetLocationsByGroup200>(
-      {url: `/api/v1/locations/groups/${groupId}`, method: 'GET',
-        params
-    },
-      );
-    }
-  return {getLocations,createLocation,getLocationById,updateLocation,deleteLocation,updateLocationEvaluation,changeLocationGroup,updateLocationCoordinates,getTopRatedLocations,getRecentLocations,getMyLocations,getLocationsByGroup}};
+  return {getLocations,createLocation,getLocationById,updateLocation,deleteLocation,getMyLocations}};
 export type GetLocationsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['getLocations']>>>
 export type CreateLocationResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['createLocation']>>>
 export type GetLocationByIdResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['getLocationById']>>>
 export type UpdateLocationResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['updateLocation']>>>
 export type DeleteLocationResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['deleteLocation']>>>
-export type UpdateLocationEvaluationResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['updateLocationEvaluation']>>>
-export type ChangeLocationGroupResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['changeLocationGroup']>>>
-export type UpdateLocationCoordinatesResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['updateLocationCoordinates']>>>
-export type GetTopRatedLocationsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['getTopRatedLocations']>>>
-export type GetRecentLocationsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['getRecentLocations']>>>
 export type GetMyLocationsResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['getMyLocations']>>>
-export type GetLocationsByGroupResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getLocations>['getLocationsByGroup']>>>

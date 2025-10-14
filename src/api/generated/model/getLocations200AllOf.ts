@@ -4,8 +4,8 @@
  * Open-Spot API
  * OpenAPI spec version: 1.0.0
  */
-import type { LocationSummaryPageResponse } from './locationSummaryPageResponse';
+import type { LocationPageResponse } from './locationPageResponse';
 
 export type GetLocations200AllOf = {
-  data?: LocationSummaryPageResponse;
+  data?: LocationPageResponse;
 };

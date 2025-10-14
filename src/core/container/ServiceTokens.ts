@@ -19,6 +19,9 @@ export const SERVICE_TOKENS = {
   // 그룹 관련
   GROUP_SERVICE: Symbol('GroupService'),
 
+  // 카테고리 관련
+  CATEGORY_SERVICE: Symbol('CategoryService'),
+
   // 쿠키 관련
   COOKIE_SERVICE: Symbol('CookieService'),
 

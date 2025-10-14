@@ -20,10 +20,14 @@ export interface LocationResponse {
   coordinates: CoordinatesResponse;
   /** @nullable */
   iconUrl?: string | null;
+  /**
+   * @minimum 0.5
+   * @maximum 5
+   * @nullable
+   */
+  rating?: number | null;
   /** @nullable */
-  personalRating?: number | null;
-  /** @nullable */
-  personalReview?: string | null;
+  review?: string | null;
   tags?: string[];
   /** @nullable */
   groupId?: string | null;

@@ -6,10 +6,11 @@ import { SecureCookieService } from '../services/SecureCookieService';
 import { AuthServiceImpl } from '../features/auth/services';
 import { LocationService } from '../services';
 import { GroupService } from '../services/groupService';
+import { CategoryService } from '../services/categoryService';
 import { MapServiceFactory } from '../services/map';
 import { setupStores } from '../stores/setup';
 import { logger } from '../utils/logger';
-import type { ILocationService, IAuthServiceFull, IGroupService } from '../core/interfaces';
+import type { ILocationService, IAuthServiceFull, IGroupService, ICategoryService } from '../core/interfaces';
 
 /**
  * 모든 서비스를 DI 컨테이너에 등록합니다
@@ -52,14 +53,21 @@ export const registerServices = (): void => {
       true // 싱글톤
     );
 
-    // 5. 맵 서비스 팩토리 등록
+    // 5. 카테고리 서비스 등록 (Orval 기반)
+    container.register(
+      SERVICE_TOKENS.CATEGORY_SERVICE,
+      () => new CategoryService(),
+      true // 싱글톤
+    );
+
+    // 6. 맵 서비스 팩토리 등록
     container.register(
       SERVICE_TOKENS.MAP_SERVICE_FACTORY,
       () => MapServiceFactory.getInstance(),
       true // 싱글톤
     );
 
-    // 6. 로거 등록 (기존 logger 인스턴스 재사용)
+    // 7. 로거 등록 (기존 logger 인스턴스 재사용)
     container.register(
       SERVICE_TOKENS.LOGGER,
       () => logger,
@@ -100,12 +108,14 @@ export const configureStores = (): void => {
     const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE) as IAuthServiceFull;
     const locationService = container.resolve(SERVICE_TOKENS.LOCATION_SERVICE) as ILocationService;
     const groupService = container.resolve(SERVICE_TOKENS.GROUP_SERVICE) as IGroupService;
+    const categoryService = container.resolve(SERVICE_TOKENS.CATEGORY_SERVICE) as ICategoryService;
 
     // 직접 동기적으로 실행하여 무한 루프 방지
     setupStores({
       authService,
       locationService,
-      groupService
+      groupService,
+      categoryService
     });
 
     isStoreConfigured = true;
@@ -178,5 +188,6 @@ export const cleanupApplication = (): void => {
 export const getAuthService = () => container.resolve(SERVICE_TOKENS.AUTH_SERVICE);
 export const getLocationService = (): ILocationService => container.resolve(SERVICE_TOKENS.LOCATION_SERVICE) as ILocationService;
 export const getGroupService = (): IGroupService => container.resolve(SERVICE_TOKENS.GROUP_SERVICE) as IGroupService;
+export const getCategoryService = (): ICategoryService => container.resolve(SERVICE_TOKENS.CATEGORY_SERVICE) as ICategoryService;
 export const getCookieService = () => container.resolve(SERVICE_TOKENS.COOKIE_SERVICE);
 export const getMapServiceFactory = () => container.resolve(SERVICE_TOKENS.MAP_SERVICE_FACTORY);

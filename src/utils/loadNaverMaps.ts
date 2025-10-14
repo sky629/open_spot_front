@@ -39,7 +39,8 @@ export const loadNaverMaps = (): Promise<void> => {
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
+    // Geocoder 서브모듈 추가로 Reverse Geocoding 지원
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`;
 
     script.onload = () => {
       isLoaded = true;

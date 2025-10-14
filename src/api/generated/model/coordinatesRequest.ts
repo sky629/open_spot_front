@@ -5,7 +5,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface UpdateLocationCoordinatesRequest {
+export interface CoordinatesRequest {
   /**
    * @minimum -90
    * @maximum 90

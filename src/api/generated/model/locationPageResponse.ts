@@ -4,10 +4,10 @@
  * Open-Spot API
  * OpenAPI spec version: 1.0.0
  */
-import type { LocationSummaryResponse } from './locationSummaryResponse';
+import type { LocationResponse } from './locationResponse';
 import type { PageInfo } from './pageInfo';
 
-export interface LocationSummaryPageResponse {
-  content: LocationSummaryResponse[];
+export interface LocationPageResponse {
+  content: LocationResponse[];
   page: PageInfo;
 }

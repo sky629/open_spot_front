@@ -5,10 +5,15 @@
 // Orval 생성 타입 import
 import type {
   LocationResponse as OrvalLocationResponse,
+  SortByParamParameter,
 } from '../api/generated/model';
 
 // Orval 타입 그대로 re-export
-export type { UserResponse } from '../api/generated/model';
+export type { UserResponse, CategoryResponse } from '../api/generated/model';
+
+// SortBy enum re-export
+export type LocationSortBy = SortByParamParameter;
+export { SortByParamParameter } from '../api/generated/model';
 
 // 공통 API 응답 타입 (Orval ApiResponse와 호환)
 export interface ApiResponse<T> {
@@ -34,8 +39,13 @@ export interface CreateLocationRequest {
   latitude: number;
   longitude: number;
   description?: string;
-  category?: string;
+  categoryId?: string;
   iconUrl?: string;
+  rating?: number;
+  review?: string;
+  address?: string;
+  tags?: string[];
+  groupId?: string;
 }
 
 export interface UpdateLocationRequest extends Partial<CreateLocationRequest> {
@@ -45,6 +55,7 @@ export interface UpdateLocationRequest extends Partial<CreateLocationRequest> {
 export interface GetLocationsParams {
   category?: string;
   categoryId?: string;
+  groupId?: string;
   bounds?: {
     northEast: { lat: number; lng: number };
     southWest: { lat: number; lng: number };
@@ -53,6 +64,7 @@ export interface GetLocationsParams {
   offset?: number;
   page?: number;
   size?: number;
+  sortBy?: LocationSortBy;
 }
 
 // 프론트엔드 전용 타입 - Orval이 생성하지 않는 타입들

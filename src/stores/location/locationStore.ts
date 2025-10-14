@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { LocationState } from './types';
-import type { LocationResponse, GetLocationsParams } from '../../types';
+import type { LocationResponse, GetLocationsParams, CreateLocationRequest } from '../../types';
 import type { ILocationService } from '../../core/interfaces';
 import { logger } from '../../utils/logger';
 
@@ -236,6 +236,42 @@ export const useLocationStore = create<LocationState>()(
           logger.info('Locations refreshed successfully');
         } catch (error) {
           logger.error('Failed to refresh locations', error);
+          throw error;
+        }
+      },
+
+      // 새 장소 생성
+      createLocation: async (request: CreateLocationRequest) => {
+        if (!locationService) {
+          throw new Error('LocationService not initialized');
+        }
+
+        const { setLoading, setError, setLocations, locations } = get();
+
+        set({ isLoading: true, error: null });
+
+        try {
+          logger.info('Creating new location', { request });
+
+          const newLocation = await locationService.createLocation(request);
+
+          // 기존 locations 배열에 새 장소 추가
+          const updatedLocations = [...locations, newLocation];
+          const locationCounts = calculateLocationCounts(updatedLocations);
+
+          set({
+            locations: updatedLocations,
+            locationCounts,
+            isLoading: false,
+            selectedLocation: newLocation, // 새로 생성된 장소 선택
+          });
+
+          logger.info('Location created successfully', { locationId: newLocation.id });
+          return newLocation;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to create location';
+          set({ error: errorMessage, isLoading: false });
+          logger.error('Failed to create location in store', error);
           throw error;
         }
       },

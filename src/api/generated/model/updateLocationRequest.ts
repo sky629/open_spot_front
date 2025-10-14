@@ -4,10 +4,19 @@
  * Open-Spot API
  * OpenAPI spec version: 1.0.0
  */
+import type { CoordinatesRequest } from './coordinatesRequest';
 
+/**
+ * 장소 통합 수정 요청 (부분 업데이트).
+모든 필드는 optional이며, 제공된 필드만 업데이트됩니다.
+
+ */
 export interface UpdateLocationRequest {
-  /** @maxLength 100 */
-  name: string;
+  /**
+   * @maxLength 100
+   * @nullable
+   */
+  name?: string | null;
   /**
    * @maxLength 1000
    * @nullable
@@ -18,10 +27,30 @@ export interface UpdateLocationRequest {
    * @nullable
    */
   address?: string | null;
-  categoryId: string;
+  /** @nullable */
+  categoryId?: string | null;
   /**
    * @maxLength 500
    * @nullable
    */
   iconUrl?: string | null;
+  /**
+   * @minimum 0.5
+   * @maximum 5
+   * @nullable
+   */
+  rating?: number | null;
+  /**
+   * @maxLength 2000
+   * @nullable
+   */
+  review?: string | null;
+  /**
+   * @maxItems 10
+   * @nullable
+   */
+  tags?: string[] | null;
+  /** @nullable */
+  groupId?: string | null;
+  coordinates?: CoordinatesRequest;
 }

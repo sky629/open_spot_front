@@ -1,6 +1,6 @@
 // Location Store Types
 
-import type { LocationResponse, GetLocationsParams } from '../../types';
+import type { LocationResponse, GetLocationsParams, CreateLocationRequest } from '../../types';
 
 export interface LocationState {
   // 상태
@@ -33,6 +33,7 @@ export interface LocationState {
     category?: string
   ) => Promise<void>;
   refreshLocations: () => Promise<void>;
+  createLocation: (request: CreateLocationRequest) => Promise<LocationResponse>;
 
   // 유틸리티
   clearError: () => void;
@@ -58,4 +59,5 @@ export interface LocationAsyncActions {
     category?: string
   ) => Promise<void>;
   refreshLocations: () => Promise<void>;
+  createLocation: (request: CreateLocationRequest) => Promise<LocationResponse>;
 }

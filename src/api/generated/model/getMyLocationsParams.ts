@@ -4,10 +4,18 @@
  * Open-Spot API
  * OpenAPI spec version: 1.0.0
  */
+import type { SortByParamParameter } from './sortByParamParameter';
 import type { PageParamParameter } from './pageParamParameter';
 import type { SizeParamParameter } from './sizeParamParameter';
 
 export type GetMyLocationsParams = {
+/**
+ * 정렬 기준 (기본 조회 시에만 적용)
+- RATING: 평점 높은 순
+- CREATED_AT: 최근 등록순 (기본값)
+
+ */
+sortBy?: SortByParamParameter;
 /**
  * @minimum 0
  */

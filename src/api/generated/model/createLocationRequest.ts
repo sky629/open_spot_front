@@ -35,16 +35,16 @@ export interface CreateLocationRequest {
    */
   iconUrl?: string | null;
   /**
-   * @minimum 1
+   * @minimum 0.5
    * @maximum 5
    * @nullable
    */
-  personalRating?: number | null;
+  rating?: number | null;
   /**
    * @maxLength 2000
    * @nullable
    */
-  personalReview?: string | null;
+  review?: string | null;
   /** @maxItems 10 */
   tags?: string[];
   /** @nullable */
