@@ -19,8 +19,8 @@ const createMockLocation = (data: {
     latitude: data.latitude,
     longitude: data.longitude
   },
-  personalRating: null,
-  personalReview: null,
+  rating: null,
+  review: null,
   tags: [],
   groupId: null,
   isActive: true,

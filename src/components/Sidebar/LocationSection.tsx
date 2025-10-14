@@ -3,18 +3,20 @@
 import React from 'react';
 import styled from 'styled-components';
 import { useLocationFilters } from '../../stores/location';
-import { MAP_CATEGORIES } from '../../constants/map';
+import { useCategories } from '../../stores/category';
 import { colors } from '../../styles';
 import { LocationList } from './LocationList';
 
 export const LocationSection: React.FC = () => {
   const { currentCategory } = useLocationFilters();
+  const categories = useCategories();
 
   const getCurrentCategoryDisplay = () => {
     if (currentCategory === null) {
       return '전체';
     }
-    return MAP_CATEGORIES[currentCategory as keyof typeof MAP_CATEGORIES] || currentCategory;
+    const category = categories.find(cat => cat.id === currentCategory);
+    return category?.displayName || currentCategory;
   };
 
   return (

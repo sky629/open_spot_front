@@ -259,7 +259,7 @@ export const useGroupStore = create<GroupStore>()(
 
         getGroupsWithLocation: (locationId: string) => {
           return get().groups.filter(group =>
-            group.locationIds.includes(locationId)
+            group.locationIds?.includes(locationId) ?? false
           );
         },
 

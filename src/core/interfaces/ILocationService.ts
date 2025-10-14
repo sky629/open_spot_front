@@ -39,6 +39,7 @@ export interface ILocationService {
   getLocationsByBounds(
     northEast: { lat: number; lng: number },
     southWest: { lat: number; lng: number },
-    category?: string
+    category?: string,
+    groupId?: string
   ): Promise<LocationResponse[]>;
 }

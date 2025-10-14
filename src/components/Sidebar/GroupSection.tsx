@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useGroups, useGroupUIState, useGroupStore } from '../../stores/group';
+import { useLocationStore } from '../../stores/location';
 import { colors, transitions } from '../../styles';
 import { CreateGroupForm } from './CreateGroupForm';
 import { EditGroupModal } from './EditGroupModal';
@@ -11,7 +12,8 @@ import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 export const GroupSection: React.FC = () => {
   const groups = useGroups();
   const ui = useGroupUIState();
-  const { setUIState } = useGroupStore();
+  const { setUIState, selectedGroupId, selectGroup } = useGroupStore();
+  const { setCurrentGroupId, refreshLocations } = useLocationStore();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -30,6 +32,20 @@ export const GroupSection: React.FC = () => {
     setUIState({ isCreating: true });
   };
 
+  const handleGroupClick = (groupId: string) => {
+    if (selectedGroupId === groupId) {
+      // 토글: 선택 해제 → 전체 조회
+      selectGroup(null);
+      setCurrentGroupId(null);
+    } else {
+      // 새 그룹 선택 → 그룹 필터링
+      selectGroup(groupId);
+      setCurrentGroupId(groupId);
+    }
+    // 지도 재조회
+    refreshLocations();
+  };
+
   return (
     <Container ref={containerRef}>
       <Header>
@@ -41,7 +57,11 @@ export const GroupSection: React.FC = () => {
 
       <GroupList>
         {groups.map((group) => (
-          <GroupItem key={group.id}>
+          <GroupItem
+            key={group.id}
+            $selected={selectedGroupId === group.id}
+            onClick={() => handleGroupClick(group.id)}
+          >
             <GroupInfo>
               <GroupColorDot $color={group.color} />
               <GroupName>{group.name}</GroupName>
@@ -49,7 +69,10 @@ export const GroupSection: React.FC = () => {
             </GroupInfo>
 
             <GroupMenu
-              onClick={() => setUIState({ showMenuForGroupId: group.id })}
+              onClick={(e) => {
+                e.stopPropagation(); // 부모 클릭 이벤트 방지
+                setUIState({ showMenuForGroupId: group.id });
+              }}
             >
               <MenuIcon>⋮</MenuIcon>
             </GroupMenu>
@@ -145,7 +168,7 @@ const GroupList = styled.div`
   gap: 0.25rem;
 `;
 
-const GroupItem = styled.div`
+const GroupItem = styled.div<{ $selected?: boolean }>`
   position: relative;
   display: flex;
   align-items: center;
@@ -154,9 +177,11 @@ const GroupItem = styled.div`
   border-radius: 6px;
   cursor: pointer;
   transition: ${transitions.fast};
+  background-color: ${props => props.$selected ? colors.primary.subtle : 'transparent'};
+  border: 2px solid ${props => props.$selected ? colors.primary.main : 'transparent'};
 
   &:hover {
-    background-color: ${colors.surface.hover};
+    background-color: ${props => props.$selected ? colors.primary.subtle : colors.surface.hover};
   }
 `;
 

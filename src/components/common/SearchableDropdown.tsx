@@ -182,7 +182,7 @@ export function SearchableDropdown<T>({
             {filteredOptions.length > 0 ? (
               filteredOptions.map((option, index) => {
                 const optionValue = getOptionValue(option);
-                const isSelected = value && getOptionValue(value) === optionValue;
+                const isSelected = !!(value && getOptionValue(value) === optionValue);
                 const isHighlighted = index === highlightedIndex;
 
                 return (

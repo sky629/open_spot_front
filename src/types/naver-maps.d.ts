@@ -11,8 +11,16 @@ declare global {
         Point: new (x: number, y: number) => { x: number; y: number };
         Size: new (width: number, height: number) => { width: number; height: number };
         Event: {
-          addListener: (target: object, eventType: string, listener: () => void) => object;
+          addListener: (target: object, eventType: string, listener: (e: any) => void) => object;
           removeListener: (listener: object) => void;
+        };
+        Service: {
+          reverseGeocode: (options: {
+            coords: NaverLatLng;
+          }, callback: (status: any, response: any) => void) => void;
+          Status: {
+            OK: any;
+          };
         };
         MapTypeId: Record<string, string>;
       };
@@ -38,10 +46,11 @@ export interface NaverLatLng {
 
 export interface NaverMap {
   setCenter(latLng: NaverLatLng): void;
-  setZoom(zoom: number): void;
+  setZoom(zoom: number, animate?: boolean): void;
   getCenter(): { lat(): number; lng(): number };
   getZoom(): number;
   getBounds(): NaverLatLngBounds;
+  panTo(latLng: NaverLatLng, options?: { duration?: number }): void;
   destroy(): void;
 }
 

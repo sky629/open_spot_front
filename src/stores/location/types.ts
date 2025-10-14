@@ -12,6 +12,7 @@ export interface LocationState {
 
   // 필터 상태
   currentCategory: string | null;
+  currentGroupId: string | null;
   currentBounds: {
     northEast: { lat: number; lng: number };
     southWest: { lat: number; lng: number };
@@ -23,6 +24,7 @@ export interface LocationState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   setCurrentCategory: (category: string | null) => void;
+  setCurrentGroupId: (groupId: string | null) => void;
   setCurrentBounds: (bounds: LocationState['currentBounds']) => void;
 
   // 비동기 액션
@@ -30,7 +32,8 @@ export interface LocationState {
   fetchLocationsByBounds: (
     northEast: { lat: number; lng: number },
     southWest: { lat: number; lng: number },
-    category?: string
+    category?: string,
+    groupId?: string
   ) => Promise<void>;
   refreshLocations: () => Promise<void>;
   createLocation: (request: CreateLocationRequest) => Promise<LocationResponse>;

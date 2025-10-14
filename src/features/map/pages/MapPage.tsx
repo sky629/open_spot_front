@@ -9,8 +9,8 @@ import { CategoryDropdown } from '../../../components/common/CategoryDropdown';
 import { GroupSection } from '../../../components/Sidebar/GroupSection';
 import { LocationSection } from '../../../components/Sidebar/LocationSection';
 import { useUser } from '../../../stores/auth';
-import { useSelectedLocation } from '../../../stores/location';
 import { useGroupStore } from '../../../stores/group';
+import { useCategoryStore } from '../../../stores/category';
 import { logger } from '../../../utils/logger';
 import { colors, media, transitions, shadows } from '../../../styles';
 import type { LocationResponse } from '../../../types';
@@ -22,8 +22,8 @@ export const MapPage: React.FC = () => {
   const user = useUser();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
-  const selectedLocation = useSelectedLocation();
   const fetchGroups = useGroupStore((state) => state.fetchGroups);
+  const fetchCategories = useCategoryStore((state) => state.fetchCategories);
 
   useEffect(() => {
     // 만약 사용자 정보가 없다면 (로그인되지 않은 상태라면)
@@ -34,17 +34,22 @@ export const MapPage: React.FC = () => {
     }
   }, [user, navigate]);
 
-  // 초기 그룹 데이터 로딩
+  // 초기 데이터 로딩 (그룹, 카테고리)
   useEffect(() => {
     if (user) {
-      logger.info('Loading groups for authenticated user');
+      logger.info('Loading initial data for authenticated user');
+
+      // 카테고리는 항상 로드
+      fetchCategories().catch((error) => {
+        logger.error('Failed to load categories', error);
+      });
+
+      // 그룹 로드
       fetchGroups().catch((error) => {
         logger.error('Failed to load groups', error);
       });
     }
-  }, [user, fetchGroups]); 
-
-  console.log('🚀 MapPage - selectedLocation:', selectedLocation);
+  }, [user, fetchGroups, fetchCategories]);
 
   const handleLocationSelect = (location: LocationResponse) => {
     logger.userAction('Location selected from map', { locationId: location.id });
@@ -120,28 +125,6 @@ export const MapPage: React.FC = () => {
 
             {/* 장소 리스트 섹션 */}
             <LocationSection />
-
-            {/* 선택된 위치 정보 */}
-            {selectedLocation && (
-              <LocationDetails>
-                <LocationTitle>{selectedLocation.name}</LocationTitle>
-                {selectedLocation.description && (
-                  <LocationDescription>
-                    {selectedLocation.description}
-                  </LocationDescription>
-                )}
-                <LocationMeta>
-                  <MetaItem>
-                    📍 {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
-                  </MetaItem>
-                  {selectedLocation.category && (
-                    <MetaItem>
-                      🏷️ {selectedLocation.category}
-                    </MetaItem>
-                  )}
-                </LocationMeta>
-              </LocationDetails>
-            )}
           </SidebarContent>
         </SidebarWrapper>
 
@@ -486,41 +469,4 @@ const Divider = styled.div`
   height: 1px;
   background-color: ${colors.border.secondary};
   margin: 0.5rem 1rem;
-`;
-
-const LocationDetails = styled.div`
-  background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: ${colors.shadow.sm};
-  border: 1px solid ${colors.border.purple};
-  margin: 1rem;
-`;
-
-const LocationTitle = styled.h3`
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: #2d3748;
-  margin: 0 0 0.5rem 0;
-`;
-
-const LocationDescription = styled.p`
-  font-size: 0.875rem;
-  color: #718096;
-  line-height: 1.5;
-  margin: 0 0 1rem 0;
-`;
-
-const LocationMeta = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-`;
-
-const MetaItem = styled.div`
-  font-size: 0.75rem;
-  color: #a0aec0;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
 `;

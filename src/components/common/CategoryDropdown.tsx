@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useLocationFilters, useLocationActions, useLocationCounts } from '../../stores/location';
-import { MAP_CATEGORIES, CATEGORY_ICONS } from '../../constants/map';
+import { useCategories } from '../../stores/category';
+import { CATEGORY_ICONS } from '../../constants/map';
 import { colors, transitions } from '../../styles';
 
 export const CategoryDropdown: React.FC = () => {
@@ -13,6 +14,8 @@ export const CategoryDropdown: React.FC = () => {
   const { currentCategory } = useLocationFilters();
   const { setCurrentCategory, refreshLocations } = useLocationActions();
   const locationCounts = useLocationCounts();
+  const categories = useCategories();
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -47,11 +50,17 @@ export const CategoryDropdown: React.FC = () => {
       };
     }
 
-    const categoryKey = currentCategory as keyof typeof CATEGORY_ICONS;
-    const categoryDisplayKey = currentCategory as keyof typeof MAP_CATEGORIES;
+    // 카테고리 ID로 실제 카테고리 찾기
+    const category = categories.find(cat => cat.id === currentCategory);
+    const categoryKey = category?.code?.toUpperCase() as keyof typeof CATEGORY_ICONS;
+
+    // icon이 이모지인지 확인 (길이가 1-2자이고 특수문자가 아닌 경우)
+    const isEmoji = category?.icon && category.icon.length <= 2 && /[\p{Emoji}]/u.test(category.icon);
+
     return {
-      icon: CATEGORY_ICONS[categoryKey] || '📍',
-      name: MAP_CATEGORIES[categoryDisplayKey] || currentCategory,
+      // 이모지인 경우만 백엔드 icon 사용, 아니면 프론트엔드 매핑
+      icon: isEmoji ? category.icon : (CATEGORY_ICONS[categoryKey] || '📍'),
+      name: category?.displayName || currentCategory,
       count: locationCounts[currentCategory] || 0
     };
   };
@@ -89,20 +98,26 @@ export const CategoryDropdown: React.FC = () => {
           <Divider />
 
           {/* 각 카테고리별 옵션 */}
-          {Object.entries(MAP_CATEGORIES).map(([key, name]) => {
-            const count = locationCounts[key] || 0;
+          {categories.map((category) => {
+            const count = locationCounts[category.id] || 0;
+            const categoryKey = category.code?.toUpperCase() as keyof typeof CATEGORY_ICONS;
+
+            // icon이 이모지인지 확인 (길이가 1-2자이고 특수문자가 아닌 경우)
+            const isEmoji = category.icon && category.icon.length <= 2 && /[\p{Emoji}]/u.test(category.icon);
+            // 이모지인 경우만 백엔드 icon 사용, 아니면 프론트엔드 매핑
+            const icon = isEmoji ? category.icon : (CATEGORY_ICONS[categoryKey] || '📍');
 
             return (
               <DropdownItem
-                key={key}
-                onClick={() => handleCategoryChange(key)}
-                $isSelected={currentCategory === key}
+                key={category.id}
+                onClick={() => handleCategoryChange(category.id)}
+                $isSelected={currentCategory === category.id}
                 $disabled={count === 0}
               >
                 <ItemContent>
                   <ItemInfo>
-                    <ItemIcon>{CATEGORY_ICONS[key as keyof typeof CATEGORY_ICONS]}</ItemIcon>
-                    <ItemName>{name}</ItemName>
+                    <ItemIcon>{icon}</ItemIcon>
+                    <ItemName>{category.displayName}</ItemName>
                   </ItemInfo>
                   <ItemCount>({count})</ItemCount>
                 </ItemContent>

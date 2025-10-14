@@ -53,10 +53,6 @@ class DevTools {
       measurePerformance: this.measurePerformance.bind(this),
     };
 
-    // 개발 환경 정보 로그 (오류만 표시 모드에서는 비활성화)
-    // logger.info('Development tools initialized');
-    // logger.debug('Debug tools available via window.debug');
-
     // 성능 관찰자 설정
     this.setupPerformanceObserver();
 
@@ -221,12 +217,8 @@ class DevTools {
   checkReactDevTools(): void {
     if (typeof window !== 'undefined') {
       const hasReactDevTools = !!(window as typeof window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__REACT_DEVTOOLS_GLOBAL_HOOK__;
-
-      if (hasReactDevTools) {
-        // logger.info('React DevTools detected');
-      } else {
-        // logger.warn('React DevTools not found. Install React DevTools extension for better debugging.');
-      }
+      // DevTools 존재 여부만 체크 (로그 없이)
+      return;
     }
   }
 }

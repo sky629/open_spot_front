@@ -5,24 +5,36 @@ import styled from 'styled-components';
 import type { LocationResponse } from '../../types';
 import { MARKER_ICONS } from '../../constants/map';
 import { colors, transitions } from '../../styles';
+import { useLocationStore } from '../../stores/location';
+import { useCategories } from '../../stores/category';
+import { AddToGroupModal } from './AddToGroupModal';
 
 interface LocationItemProps {
-  location: LocationResponse & {
-    address?: string;
-    rating?: number;
-    distance?: number;
-    phone?: string;
-    website?: string;
-  };
+  location: LocationResponse;
 }
 
 export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
+  const setSelectedLocation = useLocationStore((state) => state.setSelectedLocation);
+  const categories = useCategories();
+
+  // 카테고리 displayName 가져오기
+  const category = categories.find(cat => cat.id === location.category);
+  const categoryDisplayName = category?.displayName || '기타';
 
   const handleClick = () => {
     setShowDetails(!showDetails);
-    // TODO: Focus location on map
-    console.log('Focus location on map:', location.id);
+  };
+
+  const handleFocusOnMap = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 부모 클릭 이벤트 방지
+    setSelectedLocation(location);
+  };
+
+  const handleAddToGroup = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 부모 클릭 이벤트 방지
+    setShowAddToGroupModal(true);
   };
 
   const formatDistance = (distance?: number) => {
@@ -38,6 +50,34 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
   const formatRating = (rating?: number) => {
     if (!rating) return null;
     return rating.toFixed(1);
+  };
+
+  const renderStarRating = (rating: number) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+    return (
+      <>
+        {/* 꽉 찬 별 */}
+        {Array.from({ length: fullStars }).map((_, i) => (
+          <Star key={`full-${i}`} $filled>★</Star>
+        ))}
+
+        {/* 반 별 */}
+        {hasHalfStar && (
+          <HalfStarWrapper key="half">
+            <Star $empty>★</Star>
+            <HalfStar $filled>★</HalfStar>
+          </HalfStarWrapper>
+        )}
+
+        {/* 빈 별 */}
+        {Array.from({ length: emptyStars }).map((_, i) => (
+          <Star key={`empty-${i}`} $empty>★</Star>
+        ))}
+      </>
+    );
   };
 
   return (
@@ -76,35 +116,13 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
         <DetailsContent>
           <DetailRow>
             <DetailLabel>카테고리:</DetailLabel>
-            <DetailValue>{location.category}</DetailValue>
+            <DetailValue>{categoryDisplayName}</DetailValue>
           </DetailRow>
 
-          <DetailRow>
-            <DetailLabel>좌표:</DetailLabel>
-            <DetailValue>
-              {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-            </DetailValue>
-          </DetailRow>
-
-          {location.phone && (
+          {location.address && (
             <DetailRow>
-              <DetailLabel>전화번호:</DetailLabel>
-              <DetailValue>
-                <PhoneLink href={`tel:${location.phone}`}>
-                  {location.phone}
-                </PhoneLink>
-              </DetailValue>
-            </DetailRow>
-          )}
-
-          {location.website && (
-            <DetailRow>
-              <DetailLabel>웹사이트:</DetailLabel>
-              <DetailValue>
-                <WebLink href={location.website} target="_blank" rel="noopener noreferrer">
-                  방문하기
-                </WebLink>
-              </DetailValue>
+              <DetailLabel>주소:</DetailLabel>
+              <DetailValue>{location.address}</DetailValue>
             </DetailRow>
           )}
 
@@ -115,16 +133,65 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
             </DetailRow>
           )}
 
+          {location.rating && location.rating > 0 && (
+            <DetailRow>
+              <DetailLabel>내 평점:</DetailLabel>
+              <DetailValue>
+                <RatingStars>
+                  {renderStarRating(location.rating)}
+                </RatingStars>
+              </DetailValue>
+            </DetailRow>
+          )}
+
+          {location.review && (
+            <DetailRow>
+              <DetailLabel>내 리뷰:</DetailLabel>
+              <DetailValue>{location.review}</DetailValue>
+            </DetailRow>
+          )}
+
+
+          {location.iconUrl && (
+            <DetailRow>
+              <DetailLabel>이미지:</DetailLabel>
+              <DetailValue>
+                <LocationImage src={location.iconUrl} alt={location.name} />
+              </DetailValue>
+            </DetailRow>
+          )}
+
           <ActionButtons>
-            <ActionButton $primary>
+            <ActionButton $primary onClick={handleFocusOnMap}>
               지도에서 보기
             </ActionButton>
-            <ActionButton>
+            <ActionButton onClick={handleAddToGroup}>
               그룹에 추가
+            </ActionButton>
+            <ActionButton $edit onClick={(e) => {
+              e.stopPropagation();
+              // TODO: 수정 모달 열기
+              console.log('Edit location:', location.id);
+            }}>
+              수정
+            </ActionButton>
+            <ActionButton $delete onClick={(e) => {
+              e.stopPropagation();
+              // TODO: 삭제 확인 모달 열기
+              console.log('Delete location:', location.id);
+            }}>
+              삭제
             </ActionButton>
           </ActionButtons>
         </DetailsContent>
       )}
+
+      <AddToGroupModal
+        locationId={location.id}
+        locationName={location.name}
+        isOpen={showAddToGroupModal}
+        onClose={() => setShowAddToGroupModal(false)}
+      />
     </Container>
   );
 };
@@ -243,44 +310,94 @@ const DetailValue = styled.div`
   line-height: 1.4;
 `;
 
-const PhoneLink = styled.a`
-  color: ${colors.primary.dark};
-  text-decoration: none;
-
-  &:hover {
-    text-decoration: underline;
-  }
+const RatingStars = styled.span`
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 `;
 
-const WebLink = styled.a`
-  color: ${colors.primary.dark};
-  text-decoration: none;
-  font-weight: 500;
+const Star = styled.span<{ $filled?: boolean; $empty?: boolean }>`
+  color: ${props => props.$filled ? '#FFD700' : props.$empty ? '#E0E0E0' : 'inherit'};
+`;
 
-  &:hover {
-    text-decoration: underline;
-  }
+const HalfStarWrapper = styled.span`
+  position: relative;
+  display: inline-block;
+`;
+
+const HalfStar = styled.span<{ $filled?: boolean }>`
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  width: 50%;
+  color: ${props => props.$filled ? '#FFD700' : 'inherit'};
+`;
+
+const LocationImage = styled.img`
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-top: 0.25rem;
 `;
 
 const ActionButtons = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.5rem;
   margin-top: 0.75rem;
 `;
 
-const ActionButton = styled.button<{ $primary?: boolean }>`
+const ActionButton = styled.button<{ $primary?: boolean; $edit?: boolean; $delete?: boolean }>`
   padding: 0.5rem 0.75rem;
-  border: 1px solid ${props => props.$primary ? colors.primary.main : colors.border.primary};
+  border: 1px solid ${props =>
+    props.$primary
+      ? colors.primary.main
+      : props.$edit
+      ? colors.primary.main
+      : props.$delete
+      ? colors.status.error
+      : colors.border.primary};
   border-radius: 4px;
-  background-color: ${props => props.$primary ? colors.primary.main : 'white'};
-  color: ${props => props.$primary ? 'white' : colors.text.primary};
+  background-color: ${props =>
+    props.$primary
+      ? colors.primary.main
+      : props.$edit
+      ? 'white'
+      : props.$delete
+      ? 'white'
+      : 'white'};
+  color: ${props =>
+    props.$primary
+      ? 'white'
+      : props.$edit
+      ? colors.primary.main
+      : props.$delete
+      ? colors.status.error
+      : colors.text.primary};
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
   transition: ${transitions.fast};
 
   &:hover {
-    background-color: ${props => props.$primary ? colors.primary.dark : colors.surface.hover};
-    border-color: ${props => props.$primary ? colors.primary.dark : colors.text.tertiary};
+    background-color: ${props =>
+      props.$primary
+        ? colors.primary.dark
+        : props.$edit
+        ? colors.primary.subtle
+        : props.$delete
+        ? '#FFF5F5'
+        : colors.surface.hover};
+    border-color: ${props =>
+      props.$primary
+        ? colors.primary.dark
+        : props.$edit
+        ? colors.primary.dark
+        : props.$delete
+        ? colors.status.error
+        : colors.text.tertiary};
   }
 `;

@@ -38,6 +38,7 @@ const initialState = {
   error: null,
   locationCounts: {},
   currentCategory: null,
+  currentGroupId: null,
   currentBounds: null,
 };
 
@@ -98,6 +99,15 @@ export const useLocationStore = create<LocationState>()(
         }));
 
         logger.info('Category filter changed', { category });
+      },
+
+      setCurrentGroupId: (groupId: string | null) => {
+        set((state) => ({
+          ...state,
+          currentGroupId: groupId,
+        }));
+
+        logger.info('Group filter changed', { groupId });
       },
 
       setCurrentBounds: (bounds: LocationState['currentBounds']) => {
@@ -162,7 +172,8 @@ export const useLocationStore = create<LocationState>()(
       fetchLocationsByBounds: async (
         northEast: { lat: number; lng: number },
         southWest: { lat: number; lng: number },
-        category?: string
+        category?: string,
+        groupId?: string
       ) => {
         if (!locationService) {
           throw new Error('LocationService not initialized');
@@ -174,7 +185,7 @@ export const useLocationStore = create<LocationState>()(
           return;
         }
 
-        const { setLoading, setError, setLocations, setCurrentBounds, setCurrentCategory } = get();
+        const { setLoading, setError, setLocations, setCurrentBounds, setCurrentCategory, setCurrentGroupId } = get();
 
         try {
           isFetchingByBounds = true;
@@ -186,23 +197,29 @@ export const useLocationStore = create<LocationState>()(
           if (category !== undefined) {
             setCurrentCategory(category);
           }
+          if (groupId !== undefined) {
+            setCurrentGroupId(groupId);
+          }
 
           logger.info('Fetching locations by bounds', {
             northEast,
             southWest,
-            category
+            category,
+            groupId
           });
 
           const locations = await locationService.getLocationsByBounds(
             northEast,
             southWest,
-            category
+            category,
+            groupId
           );
           setLocations(locations);
 
           logger.info('Locations fetched by bounds successfully', {
             count: locations.length,
-            category
+            category,
+            groupId
           });
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch locations by bounds';
@@ -216,7 +233,7 @@ export const useLocationStore = create<LocationState>()(
       },
 
       refreshLocations: async () => {
-        const { currentBounds, currentCategory, fetchLocations, fetchLocationsByBounds } = get();
+        const { currentBounds, currentCategory, currentGroupId, fetchLocations, fetchLocationsByBounds } = get();
 
         try {
           logger.info('Refreshing locations');
@@ -226,11 +243,15 @@ export const useLocationStore = create<LocationState>()(
             await fetchLocationsByBounds(
               currentBounds.northEast,
               currentBounds.southWest,
-              currentCategory || undefined
+              currentCategory || undefined,
+              currentGroupId || undefined
             );
           } else {
             // 전체 새로고침
-            await fetchLocations({ category: currentCategory || undefined });
+            await fetchLocations({
+              category: currentCategory || undefined,
+              groupId: currentGroupId || undefined
+            });
           }
 
           logger.info('Locations refreshed successfully');
@@ -246,7 +267,7 @@ export const useLocationStore = create<LocationState>()(
           throw new Error('LocationService not initialized');
         }
 
-        const { setLoading, setError, setLocations, locations } = get();
+        const { locations } = get();
 
         set({ isLoading: true, error: null });
 
@@ -281,17 +302,3 @@ export const useLocationStore = create<LocationState>()(
     }
   )
 );
-
-// 개발 모드에서 스토어 상태 모니터링 (무한 루프 방지를 위해 임시 비활성화)
-// if (import.meta.env.DEV) {
-//   useLocationStore.subscribe((state) => {
-//     console.debug('📍 Location Store State Change:', {
-//       locationCount: state.locations.length,
-//       selectedLocationId: state.selectedLocation?.id,
-//       isLoading: state.isLoading,
-//       error: state.error,
-//       currentCategory: state.currentCategory,
-//       hasBounds: !!state.currentBounds,
-//     });
-//   });
-// }

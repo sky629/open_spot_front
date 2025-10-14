@@ -87,8 +87,8 @@ export class GroupService implements IGroupService {
       logger.debug('Updating group', { groupId: id, request });
 
       const response = await groupsApi.updateLocationGroup(id, {
-        name: request.name,
-        color: request.color,
+        name: request.name || 'Untitled Group',
+        color: request.color || '#8B7FD6',
       });
 
       if (response.success && response.data) {
@@ -135,14 +135,14 @@ export class GroupService implements IGroupService {
       // 현재 그룹을 가져와서 locationIds 배열에 추가 후 전체 업데이트
       const group = await this.getGroupById(groupId);
 
-      if (group.locationIds.includes(locationId)) {
+      if (group.locationIds?.includes(locationId)) {
         logger.info('Location already in group', { groupId, locationId });
         return group;
       }
 
       const updatedGroup = await this.updateGroup(groupId, {
         name: group.name,
-        color: group.color,
+        color: group.color || '#8B7FD6',
       });
 
       logger.info('Location added to group successfully', { groupId, locationId });
@@ -166,7 +166,7 @@ export class GroupService implements IGroupService {
 
       const updatedGroup = await this.updateGroup(groupId, {
         name: group.name,
-        color: group.color,
+        color: group.color || '#8B7FD6',
       });
 
       logger.info('Location removed from group successfully', { groupId, locationId });
@@ -185,7 +185,7 @@ export class GroupService implements IGroupService {
       logger.debug('Reordering groups', { count: groupOrders.length });
 
       const response = await groupsApi.reorderLocationGroups({
-        groups: groupOrders.map(g => ({
+        groupOrders: groupOrders.map(g => ({
           groupId: g.groupId,
           displayOrder: g.order, // OpenAPI 스펙에 맞게 displayOrder 사용
         })),

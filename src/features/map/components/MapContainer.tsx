@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import { useLocations, useLocationStore } from '../../../stores/location';
 import { LocationMarker } from './LocationMarker';
+import { CreateLocationModal } from './CreateLocationModal';
 import { useNaverMap } from '../../../hooks/useNaverMap';
 import { logger } from '../../../utils/logger';
 import type { LocationResponse } from '../../../types';
@@ -21,10 +22,16 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clickedPosition, setClickedPosition] = useState<{
+    lat: number;
+    lng: number;
+    address?: string;
+  } | undefined>(undefined);
   const lastBoundsRef = useRef<{ne: {lat: number, lng: number}, sw: {lat: number, lng: number}} | null>(null);
 
   const locations = useLocations();
-  const setSelectedLocation = useLocationStore((state) => state.setSelectedLocation);
+  const selectedLocation = useLocationStore((state) => state.selectedLocation);
 
   const { mapRef, map, isLoaded } = useNaverMap({
     center: { lat: 37.5665, lng: 126.9780 }, // 서울 시청
@@ -63,8 +70,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     try {
       setIsLoadingLocations(true);
       const fetchLocationsByBounds = useLocationStore.getState().fetchLocationsByBounds;
+      const currentGroupId = useLocationStore.getState().currentGroupId;
 
-      await fetchLocationsByBounds(bounds.ne, bounds.sw);
+      await fetchLocationsByBounds(bounds.ne, bounds.sw, undefined, currentGroupId || undefined);
       lastBoundsRef.current = bounds;
 
       logger.info('✅ Locations 로드 완료', bounds);
@@ -183,9 +191,57 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   }, [map, isLoaded, fetchLocationsWithBounds]);
 
   const handleLocationClick = (location: LocationResponse) => {
-    setSelectedLocation(location);
+    // 마커 클릭 시에는 지도 이동하지 않음 (정보창만 표시)
+    // setSelectedLocation(location); // 주석 처리
     onLocationSelect?.(location);
     logger.userAction('Location marker clicked', { locationId: location.id });
+  };
+
+  // 우클릭 이벤트 핸들러
+  const handleRightClick = useCallback((e: { coord: { lat: () => number; lng: () => number } }) => {
+    const lat = e.coord.lat();
+    const lng = e.coord.lng();
+
+    logger.info('Map right-clicked', { lat, lng });
+
+    // TODO: 백엔드 Reverse Geocoding API 연동 후 주소 자동 조회 구현
+    setClickedPosition({ lat, lng });
+    setIsModalOpen(true);
+  }, []);
+
+  // 우클릭 이벤트 등록
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    const listener = window.naver.maps.Event.addListener(map, 'rightclick', handleRightClick);
+
+    return () => {
+      window.naver.maps.Event.removeListener(listener);
+    };
+  }, [map, isLoaded, handleRightClick]);
+
+  // 선택된 위치로 지도 중심 이동
+  useEffect(() => {
+    if (!map || !isLoaded || !selectedLocation) return;
+
+    const { latitude, longitude } = selectedLocation;
+    if (!latitude || !longitude) return;
+
+    // 지도 중심을 선택된 위치로 부드럽게 이동
+    const newCenter = new window.naver.maps.LatLng(latitude, longitude);
+    map.panTo(newCenter, { duration: 500 }); // 500ms 애니메이션
+
+    // 줌 레벨을 15로 설정 (상세 보기)
+    if (map.getZoom() < 15) {
+      map.setZoom(15, true); // true는 애니메이션 활성화
+    }
+
+    logger.info('Map centered on selected location', { latitude, longitude });
+  }, [map, isLoaded, selectedLocation]);
+
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setClickedPosition(undefined);
   };
 
   return (
@@ -214,6 +270,12 @@ export const MapContainer: React.FC<MapContainerProps> = ({
           {isLoadingLocations && ' (로딩 중...)'}
         </LocationCount>
       </MapControls>
+
+      <CreateLocationModal
+        isOpen={isModalOpen}
+        onClose={handleModalClose}
+        initialPosition={clickedPosition}
+      />
     </Container>
   );
 };

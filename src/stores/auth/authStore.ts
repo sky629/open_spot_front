@@ -370,15 +370,3 @@ export const useAuthStore = create<AuthState>()(
     )
   )
 );
-
-// 개발 모드에서 스토어 상태 모니터링 (잠시 비활성화 - 무한 루프 방지)
-// if (import.meta.env.DEV) {
-//   useAuthStore.subscribe((state) => {
-//     console.debug('🔄 Auth Store State Change:', {
-//       isAuthenticated: state.isAuthenticated,
-//       user: state.user ? { id: state.user.id, name: state.user.name } : null,
-//       isLoading: state.isLoading,
-//       error: state.error,
-//     });
-//   });
-// }
