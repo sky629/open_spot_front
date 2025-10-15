@@ -6,6 +6,8 @@ import type { LocationResponse, NaverMap } from '../../../types';
 import { MARKER_ICONS } from '../../../constants/map';
 import { useCategories } from '../../../stores/category';
 import { useLocationStore } from '../../../stores/location';
+import { useGroupStore } from '../../../stores/group';
+import { getMarkerIcon } from '../../../utils/mapIcon';
 
 // Naver Maps API 타입 정의 (전역 타입 사용)
 type NaverMarker = {
@@ -34,6 +36,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
   const markerRef = useRef<NaverMarker | null>(null);
   const infoWindowRef = useRef<NaverInfoWindow | null>(null);
   const categories = useCategories();
+  const getGroupById = useGroupStore((state) => state.getGroupById);
 
   useEffect(() => {
     if (!map || !location.latitude || !location.longitude) {
@@ -51,8 +54,11 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
     // 마커 생성
     const position = new window.naver.maps.LatLng(location.latitude, location.longitude);
 
-    // 카테고리에 따른 아이콘 선택
-    const iconUrl = location.category && location.category in MARKER_ICONS
+    // 그룹 색상 또는 카테고리에 따른 아이콘 선택
+    const group = location.groupId ? getGroupById(location.groupId) : undefined;
+    const iconUrl = group && group.color
+      ? getMarkerIcon(group.color)
+      : location.category && location.category in MARKER_ICONS
       ? MARKER_ICONS[location.category as keyof typeof MARKER_ICONS]
       : MARKER_ICONS.DEFAULT;
 
