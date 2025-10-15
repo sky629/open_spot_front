@@ -1,10 +1,11 @@
 // Location Marker Component
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { LocationResponse, NaverMap } from '../../../types';
 import { MARKER_ICONS } from '../../../constants/map';
 import { useCategories } from '../../../stores/category';
+import { useLocationStore } from '../../../stores/location';
 
 // Naver Maps API 타입 정의 (전역 타입 사용)
 type NaverMarker = {
@@ -25,7 +26,7 @@ interface LocationMarkerProps {
   onClick?: (location: LocationResponse) => void;
 }
 
-export const LocationMarker: React.FC<LocationMarkerProps> = ({
+export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
   map,
   location,
   onClick
@@ -110,28 +111,32 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
       console.log('Map exists:', !!map);
       console.log('Marker exists:', !!marker);
 
-      // 다른 정보창들 닫기
-      if ((infoWindow as any).getMap()) {
-        console.log('InfoWindow is already open, closing...');
-        (infoWindow as any).close();
-      } else {
-        console.log('Opening InfoWindow...');
-        try {
-          (infoWindow as any).open(map, marker);
-          console.log('✅ InfoWindow.open() called successfully');
+      const { setSelectedLocation, setOpenInfoWindow } = useLocationStore.getState();
 
-          // 정보창이 열린 후 이벤트 리스너 설정
-          setTimeout(() => {
-            const isOpen = (infoWindow as any).getMap();
-            console.log('InfoWindow is now open?', !!isOpen);
+      // 사이드바 하이라이트 설정
+      setSelectedLocation(location);
+      console.log('✅ Selected location set:', location.name);
 
-            if (isOpen) {
-              setupInfoWindowEvents();
-            }
-          }, 100);
-        } catch (error) {
-          console.error('❌ Failed to open InfoWindow:', error);
-        }
+      // 정보창 열기 전에 이전 정보창 닫기 (store에서 자동 처리)
+      setOpenInfoWindow(infoWindow as any);
+
+      // 정보창 열기
+      console.log('Opening InfoWindow...');
+      try {
+        (infoWindow as any).open(map, marker);
+        console.log('✅ InfoWindow.open() called successfully');
+
+        // 정보창이 열린 후 이벤트 리스너 설정
+        setTimeout(() => {
+          const isOpen = (infoWindow as any).getMap();
+          console.log('InfoWindow is now open?', !!isOpen);
+
+          if (isOpen) {
+            setupInfoWindowEvents();
+          }
+        }, 100);
+      } catch (error) {
+        console.error('❌ Failed to open InfoWindow:', error);
       }
 
       onClick?.(location);
@@ -140,8 +145,6 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
     // 정보창 버튼 이벤트 (동적으로 추가됨)
     const setupInfoWindowEvents = () => {
       const closeButton = document.querySelector(`[data-location-id="${location.id}"] .close-btn`);
-      const editButton = document.querySelector(`[data-location-id="${location.id}"] .edit-btn`);
-      const deleteButton = document.querySelector(`[data-location-id="${location.id}"] .delete-btn`);
 
       console.log('Setting up info window events for location:', location.id);
       console.log('Close button found:', !!closeButton);
@@ -158,42 +161,72 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
           e.stopPropagation();
           console.log('Close button clicked');
           (infoWindow as any).close();
+
+          // 하이라이트 및 정보창 참조 제거
+          const { setSelectedLocation, setOpenInfoWindow } = useLocationStore.getState();
+          setSelectedLocation(null);
+          setOpenInfoWindow(null);
+          console.log('✅ Selected location cleared');
         }, { once: false }); // Allow multiple clicks
       }
-
-      if (editButton) {
-        editButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Edit location:', location.id);
-          (infoWindow as any).close();
-        }, { once: false });
-      }
-
-      if (deleteButton) {
-        deleteButton.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Delete location:', location.id);
-          (infoWindow as any).close();
-        }, { once: false });
-      }
     };
+
+    // InfoWindow가 닫힐 때 하이라이트 제거 (외부 클릭 등)
+    const closeclickListener = window.naver.maps.Event.addListener(infoWindow as any, 'closeclick', () => {
+      console.log('InfoWindow closeclick event');
+      const { setSelectedLocation, setOpenInfoWindow } = useLocationStore.getState();
+      setSelectedLocation(null);
+      setOpenInfoWindow(null);
+      console.log('✅ Selected location cleared (closeclick)');
+    });
 
     // 정보창이 열릴 때 이벤트 설정
     const domReadyListener = window.naver.maps.Event.addListener(infoWindow as any, 'domready', setupInfoWindowEvents);
 
+    // 지도 이동 시 정보창이 자동으로 닫히는 것을 감지하여 하이라이트 제거
+    // Naver Maps는 지도 이동 시 정보창을 자동으로 닫지만 이벤트를 발생시키지 않음
+    let checkInterval: NodeJS.Timeout | null = null;
+    let wasOpen = !!(infoWindow as any).getMap(); // 초기 상태 확인
+
+    const startCheckingInfoWindow = () => {
+      checkInterval = setInterval(() => {
+        const isCurrentlyOpen = !!(infoWindow as any).getMap();
+
+        // 이전에 열려있었는데 지금 닫혀있으면 → 자동으로 닫힌 것
+        if (wasOpen && !isCurrentlyOpen) {
+          console.log('🔍 InfoWindow auto-closed detected (map moved)');
+          const { selectedLocation, setSelectedLocation, setOpenInfoWindow } = useLocationStore.getState();
+
+          // 현재 선택된 위치가 이 마커의 위치인 경우에만 하이라이트 제거
+          if (selectedLocation?.id === location.id) {
+            setSelectedLocation(null);
+            setOpenInfoWindow(null);
+            console.log('✅ Selected location cleared (auto-close)');
+          }
+          wasOpen = false;
+        } else if (isCurrentlyOpen) {
+          wasOpen = true;
+        }
+      }, 200); // 200ms마다 체크
+    };
+
+    startCheckingInfoWindow();
+
     // 클린업
     return () => {
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
       window.naver.maps.Event.removeListener(clickListener);
       window.naver.maps.Event.removeListener(domReadyListener);
+      window.naver.maps.Event.removeListener(closeclickListener);
 
       if ((infoWindow as any).getMap()) {
         (infoWindow as any).close();
       }
       marker.setMap(null);
     };
-  }, [map, location, onClick, categories]);
+  }, [map, location.id, location.latitude, location.longitude, location.category]);
 
   // 위치 업데이트
   useEffect(() => {
@@ -205,7 +238,11 @@ export const LocationMarker: React.FC<LocationMarkerProps> = ({
 
   // 이 컴포넌트는 실제로 렌더링되지 않음 (마커는 지도에 직접 추가됨)
   return null;
-};
+}, (prevProps, nextProps) => {
+  // location.id가 같으면 리렌더링 방지
+  return prevProps.location.id === nextProps.location.id &&
+         prevProps.map === nextProps.map;
+});
 
 // 별점을 HTML로 변환하는 헬퍼 함수 (정보창용)
 const formatStarRatingHTML = (rating: number): string => {
@@ -303,17 +340,6 @@ const createInfoWindowContent = (location: LocationResponse, categoryDisplayName
       ${addressSection}
       ${descriptionSection}
       ${reviewSection}
-
-      <div style="display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
-        <button class="edit-btn" data-location-id="${location.id}"
-                style="flex: 1; padding: 8px 12px; background-color: #8B7FD6; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color 0.2s;">
-          수정
-        </button>
-        <button class="delete-btn" data-location-id="${location.id}"
-                style="flex: 1; padding: 8px 12px; background-color: white; color: #F56565; border: 1px solid #F56565; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">
-          삭제
-        </button>
-      </div>
     </div>
   `;
 };

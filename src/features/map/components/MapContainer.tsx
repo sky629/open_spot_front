@@ -32,6 +32,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
   const locations = useLocations();
   const selectedLocation = useLocationStore((state) => state.selectedLocation);
+  const shouldFocusOnMap = useLocationStore((state) => state.shouldFocusOnMap);
 
   const { mapRef, map, isLoaded } = useNaverMap({
     center: { lat: 37.5665, lng: 126.9780 }, // 서울 시청
@@ -191,8 +192,6 @@ export const MapContainer: React.FC<MapContainerProps> = ({
   }, [map, isLoaded, fetchLocationsWithBounds]);
 
   const handleLocationClick = (location: LocationResponse) => {
-    // 마커 클릭 시에는 지도 이동하지 않음 (정보창만 표시)
-    // setSelectedLocation(location); // 주석 처리
     onLocationSelect?.(location);
     logger.userAction('Location marker clicked', { locationId: location.id });
   };
@@ -220,9 +219,9 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     };
   }, [map, isLoaded, handleRightClick]);
 
-  // 선택된 위치로 지도 중심 이동
+  // "지도에서 보기" 버튼 클릭 시에만 지도 중심 이동
   useEffect(() => {
-    if (!map || !isLoaded || !selectedLocation) return;
+    if (!map || !isLoaded || !selectedLocation || !shouldFocusOnMap) return;
 
     const { latitude, longitude } = selectedLocation;
     if (!latitude || !longitude) return;
@@ -237,7 +236,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
     }
 
     logger.info('Map centered on selected location', { latitude, longitude });
-  }, [map, isLoaded, selectedLocation]);
+  }, [map, isLoaded, selectedLocation, shouldFocusOnMap]);
 
   const handleModalClose = () => {
     setIsModalOpen(false);
@@ -266,7 +265,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
 
       <MapControls>
         <LocationCount>
-          📍 {locations?.length || 0}개 위치
+          📍 {locations?.length || 0}개 저장
           {isLoadingLocations && ' (로딩 중...)'}
         </LocationCount>
       </MapControls>
@@ -331,7 +330,8 @@ const LoadingText = styled.p`
 const MapControls = styled.div`
   position: absolute;
   top: 20px;
-  right: 20px;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   gap: 12px;

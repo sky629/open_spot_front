@@ -2,12 +2,15 @@
 
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import type { LocationResponse } from '../../types';
+import type { LocationResponse, UpdateLocationRequest } from '../../types';
 import { MARKER_ICONS } from '../../constants/map';
 import { colors, transitions } from '../../styles';
 import { useLocationStore } from '../../stores/location';
 import { useCategories } from '../../stores/category';
+import { useGroups, useGroupStore } from '../../stores/group';
 import { AddToGroupModal } from './AddToGroupModal';
+import { EditLocationModal } from './EditLocationModal';
+import { DeleteConfirmModal } from './DeleteConfirmModal';
 
 interface LocationItemProps {
   location: LocationResponse;
@@ -16,12 +19,29 @@ interface LocationItemProps {
 export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showAddToGroupModal, setShowAddToGroupModal] = useState(false);
-  const setSelectedLocation = useLocationStore((state) => state.setSelectedLocation);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showRemoveGroupConfirm, setShowRemoveGroupConfirm] = useState(false);
+
+  const selectedLocation = useLocationStore((state) => state.selectedLocation);
+  const focusLocationOnMap = useLocationStore((state) => state.focusLocationOnMap);
+  const updateLocation = useLocationStore((state) => state.updateLocation);
+  const deleteLocation = useLocationStore((state) => state.deleteLocation);
+  const removeLocationFromGroup = useLocationStore((state) => state.removeLocationFromGroup);
   const categories = useCategories();
+  const groups = useGroups();
+
+  // 현재 장소가 선택되었는지 확인
+  const isHighlighted = selectedLocation?.id === location.id;
 
   // 카테고리 displayName 가져오기
   const category = categories.find(cat => cat.id === location.category);
   const categoryDisplayName = category?.displayName || '기타';
+
+  // 속한 그룹 찾기
+  const belongingGroup = location.groupId
+    ? groups.find(g => g.id === location.groupId)
+    : null;
 
   const handleClick = () => {
     setShowDetails(!showDetails);
@@ -29,12 +49,38 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
 
   const handleFocusOnMap = (e: React.MouseEvent) => {
     e.stopPropagation(); // 부모 클릭 이벤트 방지
-    setSelectedLocation(location);
+    focusLocationOnMap(location); // 지도 이동 포함
   };
 
   const handleAddToGroup = (e: React.MouseEvent) => {
     e.stopPropagation(); // 부모 클릭 이벤트 방지
     setShowAddToGroupModal(true);
+  };
+
+  const handleRemoveFromGroup = (e: React.MouseEvent) => {
+    e.stopPropagation(); // 부모 클릭 이벤트 방지
+    setShowRemoveGroupConfirm(true);
+  };
+
+  const confirmRemoveFromGroup = async () => {
+    if (!location.groupId) return;
+
+    try {
+      const previousGroupId = location.groupId;
+
+      await removeLocationFromGroup({
+        id: location.id,
+        groupId: undefined
+      });
+
+      // 그룹 동기화
+      const { updateGroupLocationIds } = useGroupStore.getState();
+      await updateGroupLocationIds(previousGroupId);
+
+      setShowRemoveGroupConfirm(false);
+    } catch (error) {
+      console.error('Failed to remove from group', error);
+    }
   };
 
   const formatDistance = (distance?: number) => {
@@ -81,7 +127,7 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
   };
 
   return (
-    <Container onClick={handleClick} $isExpanded={showDetails}>
+    <Container onClick={handleClick} $isExpanded={showDetails} $isHighlighted={isHighlighted}>
       <MainContent>
         <LocationIcon>
           {MARKER_ICONS[location.category as keyof typeof MARKER_ICONS] || '📍'}
@@ -107,9 +153,23 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
           </LocationMeta>
         </LocationInfo>
 
-        <ExpandIcon $isExpanded={showDetails}>
-          ▼
-        </ExpandIcon>
+        <RightSection>
+          {belongingGroup && (
+            <GroupBadge $color={belongingGroup.color || '#8B7FD6'}>
+              {belongingGroup.name}
+              <RemoveIcon
+                onClick={handleRemoveFromGroup}
+                title="그룹에서 제거"
+              >
+                ×
+              </RemoveIcon>
+            </GroupBadge>
+          )}
+
+          <ExpandIcon $isExpanded={showDetails}>
+            ▼
+          </ExpandIcon>
+        </RightSection>
       </MainContent>
 
       {showDetails && (
@@ -170,15 +230,13 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
             </ActionButton>
             <ActionButton $edit onClick={(e) => {
               e.stopPropagation();
-              // TODO: 수정 모달 열기
-              console.log('Edit location:', location.id);
+              setShowEditModal(true);
             }}>
               수정
             </ActionButton>
             <ActionButton $delete onClick={(e) => {
               e.stopPropagation();
-              // TODO: 삭제 확인 모달 열기
-              console.log('Delete location:', location.id);
+              setShowDeleteModal(true);
             }}>
               삭제
             </ActionButton>
@@ -192,13 +250,58 @@ export const LocationItem: React.FC<LocationItemProps> = ({ location }) => {
         isOpen={showAddToGroupModal}
         onClose={() => setShowAddToGroupModal(false)}
       />
+
+      <EditLocationModal
+        location={location}
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        onSubmit={async (requestData: UpdateLocationRequest) => {
+          await updateLocation(requestData);
+        }}
+      />
+
+      <DeleteConfirmModal
+        locationId={location.id}
+        locationName={location.name}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={async (id: string) => {
+          await deleteLocation(id);
+        }}
+      />
+
+      {/* 그룹 제거 확인 모달 */}
+      {showRemoveGroupConfirm && belongingGroup && (
+        <Overlay onClick={() => setShowRemoveGroupConfirm(false)}>
+          <ConfirmModal onClick={(e) => e.stopPropagation()}>
+            <ModalHeader>
+              <ModalTitle>그룹에서 제거</ModalTitle>
+              <CloseButton onClick={() => setShowRemoveGroupConfirm(false)}>✕</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <ConfirmMessage>
+                <strong>{location.name}</strong>를<br />
+                <strong style={{ color: belongingGroup.color }}>{belongingGroup.name}</strong> 그룹에서 제거하시겠습니까?
+              </ConfirmMessage>
+            </ModalBody>
+            <ModalFooter>
+              <CancelButton onClick={() => setShowRemoveGroupConfirm(false)}>
+                취소
+              </CancelButton>
+              <ConfirmButton onClick={confirmRemoveFromGroup}>
+                제거
+              </ConfirmButton>
+            </ModalFooter>
+          </ConfirmModal>
+        </Overlay>
+      )}
     </Container>
   );
 };
 
-const Container = styled.div<{ $isExpanded: boolean }>`
-  background-color: white;
-  border: 1px solid ${colors.border.secondary};
+const Container = styled.div<{ $isExpanded: boolean; $isHighlighted: boolean }>`
+  background-color: ${props => props.$isHighlighted ? colors.primary.subtle : 'white'};
+  border: 2px solid ${props => props.$isHighlighted ? colors.primary.main : colors.border.secondary};
   border-radius: 8px;
   margin: 0 1rem 0.5rem;
   cursor: pointer;
@@ -206,12 +309,12 @@ const Container = styled.div<{ $isExpanded: boolean }>`
   overflow: hidden;
 
   &:hover {
-    border-color: ${colors.primary.light};
+    border-color: ${props => props.$isHighlighted ? colors.primary.dark : colors.primary.light};
     box-shadow: ${colors.shadow.sm};
   }
 
   ${props => props.$isExpanded && `
-    border-color: ${colors.status.info};
+    border-color: ${props.$isHighlighted ? colors.primary.dark : colors.status.info};
     box-shadow: ${colors.shadow.md};
   `}
 `;
@@ -270,13 +373,20 @@ const MetaText = styled.span`
   color: ${colors.text.secondary};
 `;
 
+const RightSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-shrink: 0;
+`;
+
 const ExpandIcon = styled.div<{ $isExpanded: boolean }>`
   font-size: 0.75rem;
   color: ${colors.text.tertiary};
   transition: ${transitions.fast};
   transform: ${props => props.$isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};
   flex-shrink: 0;
-  margin-top: 0.125rem;
 `;
 
 const DetailsContent = styled.div`
@@ -348,6 +458,159 @@ const ActionButtons = styled.div`
   grid-template-columns: repeat(2, 1fr);
   gap: 0.5rem;
   margin-top: 0.75rem;
+`;
+
+const GroupBadge = styled.div<{ $color: string }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  background-color: ${props => props.$color};
+  color: white;
+  border-radius: 10px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  max-width: fit-content;
+  white-space: nowrap;
+`;
+
+const RemoveIcon = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.875rem;
+  height: 0.875rem;
+  background: rgba(255, 255, 255, 0.3);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: ${transitions.fast};
+  padding: 0;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+`;
+
+const Overlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+`;
+
+const ConfirmModal = styled.div`
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: ${colors.shadow.lg};
+  max-width: 400px;
+  width: 100%;
+  overflow: hidden;
+`;
+
+const ModalHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid ${colors.border.secondary};
+  background-color: ${colors.surface.hover};
+`;
+
+const ModalTitle = styled.h3`
+  font-size: 1rem;
+  font-weight: 600;
+  color: ${colors.text.primary};
+  margin: 0;
+`;
+
+const CloseButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: ${colors.text.tertiary};
+  cursor: pointer;
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: ${transitions.fast};
+
+  &:hover {
+    background-color: ${colors.surface.hover};
+    color: ${colors.text.primary};
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 1.5rem;
+  text-align: center;
+`;
+
+const ConfirmMessage = styled.p`
+  font-size: 0.9375rem;
+  color: ${colors.text.primary};
+  line-height: 1.6;
+  margin: 0;
+
+  strong {
+    font-weight: 600;
+  }
+`;
+
+const ModalFooter = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-top: 1px solid ${colors.border.secondary};
+  background-color: ${colors.surface.hover};
+`;
+
+const CancelButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: 1px solid ${colors.border.primary};
+  border-radius: 4px;
+  background-color: white;
+  color: ${colors.text.primary};
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: ${transitions.fast};
+
+  &:hover {
+    background-color: ${colors.surface.hover};
+    border-color: ${colors.text.tertiary};
+  }
+`;
+
+const ConfirmButton = styled.button`
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background-color: ${colors.status.error};
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: ${transitions.fast};
+
+  &:hover {
+    background-color: #E53E3E;
+  }
 `;
 
 const ActionButton = styled.button<{ $primary?: boolean; $edit?: boolean; $delete?: boolean }>`

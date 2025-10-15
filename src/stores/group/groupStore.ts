@@ -171,7 +171,7 @@ export const useGroupStore = create<GroupStore>()(
             for (const locationId of locationIds) {
               await locationStore.removeLocationFromGroup({
                 id: locationId,
-                groupId: null
+                groupId: undefined
               });
             }
 

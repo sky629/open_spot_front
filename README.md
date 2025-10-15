@@ -8,9 +8,13 @@ React TypeScript 기반의 위치 정보 공유 플랫폼 프론트엔드입니�
 - **📍 네이버 지도 연동**: 네이버 클라우드 플랫폼 Maps API v3 활용
 - **🎯 카테고리별 마커 표시**: 음식점, 카페, 쇼핑, 공원 등 카테고리별 SVG 마커
 - **📱 반응형 사이드바**: 데스크톱 사이드바, 모바일 오버레이 UI
-- **🏷️ 실시간 카테고리 필터링**: 위치 개수와 함께 카테고리별 필터링
+- **🏷️ 그룹 관리**: 장소를 그룹으로 분류하고 실시간 개수 표시
+- **📊 실시간 카운트**: 그룹별, 카테고리별 장소 개수 자동 업데이트
+- **🗺️ 지도 네비게이션**: "지도에서 보기" 버튼으로 장소로 즉시 이동
 - **💬 정보창**: 마커 클릭 시 위치 상세 정보 표시
+- **✏️ 장소 관리**: 추가, 수정, 삭제, 그룹 할당 등 완전한 CRUD
 - **🏗️ 의존성 주입**: Clean Architecture 기반 서비스 계층
+- **🔄 API 코드 자동 생성**: Orval로 OpenAPI 스펙에서 타입 안전한 클라이언트 생성
 
 ## 🛠️ 기술 스택
 
@@ -18,10 +22,11 @@ React TypeScript 기반의 위치 정보 공유 플랫폼 프론트엔드입니�
 - **Build Tool**: Vite 7
 - **Package Manager**: Yarn
 - **Styling**: Styled Components
-- **State Management**: Zustand with persistence
-- **Authentication**: Google OAuth 2.0
-- **HTTP Client**: Axios with interceptors
+- **State Management**: Zustand with persistence and devtools
+- **Authentication**: Google OAuth 2.0 with JWT
+- **HTTP Client**: Axios with secure interceptors
 - **Map API**: Naver Cloud Platform Maps API v3
+- **API Code Gen**: Orval (OpenAPI → TypeScript)
 - **Architecture**: Feature-based with Dependency Injection
 - **Routing**: React Router DOM v7
 
@@ -136,82 +141,89 @@ docker-compose up --build
 
 ```
 src/
-├── components/         # 재사용 가능한 UI 컴포넌트
-│   ├── Map/           # 지도 관련 컴포넌트
-│   │   ├── MapContainer.tsx    # 메인 지도 컨테이너
-│   │   └── LocationMarker.tsx  # 개별 위치 마커
-│   ├── Sidebar/       # 사이드바 네비게이션
-│   │   ├── Sidebar.tsx         # 메인 사이드바 (카테고리 필터링)
-│   │   ├── SidebarItem.tsx     # 개별 카테고리 아이템 (개수 포함)
-│   │   └── LocationItem.tsx    # 위치 목록 아이템
-│   ├── common/        # 공통 UI 컴포넌트
-│   ├── ProtectedRoute.tsx      # 인증 보호 라우트
-│   └── TokenHandler.tsx        # JWT 토큰 처리
-├── pages/             # 페이지 컴포넌트
-│   ├── LoginPage.tsx           # Google OAuth 로그인
-│   ├── AuthCallbackPage.tsx    # OAuth 콜백 핸들러
-│   └── MapPage.tsx            # 메인 지도 페이지 (사이드바 포함)
-├── hooks/             # 커스텀 React 훅
-│   ├── useLocations.ts        # 위치 데이터 관리 (카테고리 개수 포함)
-│   ├── useNaverMap.ts         # 네이버 지도 인스턴스 관리
-│   └── useAuth.ts             # 인증 상태 관리
-├── services/          # 외부 API 서비스
-│   ├── locationService.ts     # 위치 CRUD (Mock-first 전략)
-│   ├── authService.ts         # Google OAuth 통합
-│   └── api.ts                 # 베이스 API 클라이언트 (인터셉터 포함)
-├── stores/            # Zustand 스토어 (레거시, 훅으로 교체 중)
-│   ├── auth/         # 인증 스토어 (서비스 주입 패턴)
-│   └── location/     # 위치 스토어
-├── contexts/          # React Context 프로바이더
-│   └── AuthContext.tsx        # 인증 컨텍스트
-├── core/              # 애플리케이션 코어
-│   ├── container/    # 의존성 주입 컨테이너
-│   │   ├── Container.ts       # DI 컨테이너 구현
-│   │   └── ServiceTokens.ts   # 서비스 토큰 정의
-│   └── interfaces/   # 서비스 인터페이스
-├── constants/         # 애플리케이션 상수
-│   ├── map.ts                 # 지도 설정, 카테고리, 마커 아이콘
-│   └── api.ts                 # API 엔드포인트
-├── types/             # TypeScript 타입 정의
-├── utils/             # 유틸리티 함수
-└── setup/             # 애플리케이션 초기화
-    └── initializeApplication.ts
+├── features/          # Feature modules
+│   ├── auth/         # Authentication feature
+│   │   ├── components/      # Login, ProtectedRoute
+│   │   ├── pages/          # LoginPage, LoginErrorPage
+│   │   └── services/       # AuthServiceImpl
+│   └── map/          # Map feature
+│       ├── components/      # MapContainer, LocationMarker, CreateLocationModal
+│       └── pages/          # MapPage
+├── components/        # Shared UI components
+│   ├── Sidebar/      # GroupSection, LocationSection, LocationItem
+│   │   ├── GroupSection.tsx       # 그룹 관리 (개수 포함)
+│   │   ├── LocationSection.tsx    # 장소 목록 (개수 포함)
+│   │   ├── LocationItem.tsx       # 장소 상세 (수정/삭제/그룹 추가)
+│   │   ├── AddToGroupModal.tsx    # 그룹 추가 모달
+│   │   ├── EditLocationModal.tsx  # 장소 수정 모달
+│   │   └── DeleteConfirmModal.tsx # 삭제 확인 모달
+│   └── common/       # CategoryDropdown, SearchableDropdown
+├── api/               # Generated API client (Orval)
+│   └── generated/    # Auto-generated from openapi.yaml
+├── stores/            # Zustand stores
+│   ├── auth/         # Authentication store with service injection
+│   ├── location/     # Location store with map navigation control
+│   ├── group/        # Group store with locationIds sync
+│   └── category/     # Category store
+├── services/          # Service layer
+│   ├── locationService.ts  # Location CRUD operations
+│   ├── groupService.ts     # Group management
+│   └── categoryService.ts  # Category operations
+├── core/              # Core architecture
+│   ├── container/    # Dependency injection container
+│   └── interfaces/   # Service interfaces (ILocationService, IGroupService)
+├── constants/         # Application constants
+│   ├── map.ts        # Map config, categories, marker icons
+│   └── api.ts        # API endpoints
+├── types/             # TypeScript type definitions
+├── utils/             # Utility functions (logger, cookies)
+└── setup/             # Application initialization
 ```
 
 ### 아키텍처 특징
 
-- **Feature-based Architecture**: 기능별 디렉토리 구조
-- **Dependency Injection**: 서비스 계층 의존성 주입
-- **Mock-first Development**: 즉시 목 데이터 반환, API 준비시 쉬운 전환
+- **Feature-based Architecture**: 기능별 디렉토리 구조 (auth, map)
+- **Dependency Injection**: 서비스 계층 의존성 주입 (DI Container)
+- **Backend API Integration**: OpenAPI 스펙 기반 Orval 자동 코드 생성
+- **Group-Location Sync**: 백엔드를 Single Source of Truth로 활용
 - **Clean Separation**: UI, 비즈니스 로직, 데이터 레이어 분리
 - **Type Safety**: 모든 레이어에서 TypeScript 강타입 적용
+- **Real-time Updates**: 그룹/장소 개수 실시간 동기화
 
 ## 🔌 API 연동
 
-### 현재 상태: Mock-first 개발 전략
+### 현재 상태: 백엔드 API 통합 완료
 
-현재 애플리케이션은 **즉시 목 데이터 반환** 방식으로 구현되어 있습니다:
+애플리케이션은 Spring Boot 백엔드와 완전히 통합되어 있습니다:
 
-- **23개 서울 위치 데이터**: 실제 서울 지역 장소들로 구성
-- **카테고리별 분류**: 음식점(8), 카페(5), 쇼핑(5), 공원(5)
-- **즉시 응답**: API 호출 대신 즉시 목 데이터 반환
-- **쉬운 전환**: 백엔드 준비시 주석 해제로 간단 전환
+- **Orval 자동 생성**: `openapi.yaml` → TypeScript 클라이언트
+- **타입 안전성**: 모든 API 요청/응답이 타입 체크됨
+- **Graceful Fallback**: API 실패 시 목 데이터로 대체
+- **실시간 동기화**: 백엔드를 Single Source of Truth로 활용
 
-### 백엔드 API 엔드포인트 (준비됨)
+### 백엔드 API 엔드포인트
 
 ```
 # 인증 관련
 POST   /api/v1/auth/login          # Google OAuth 로그인
 POST   /api/v1/auth/refresh        # JWT 토큰 갱신
 POST   /api/v1/auth/logout         # 로그아웃
+GET    /api/v1/auth/user           # 사용자 정보 조회
 
-# 위치 관련 (locationService.ts에 구현 준비됨)
-GET    /api/v1/locations           # 모든 위치 조회
-GET    /api/v1/locations?category=cafe  # 카테고리별 조회
+# 위치 관련
+GET    /api/v1/locations           # 모든 위치 조회 (페이지네이션)
+GET    /api/v1/locations?category=cafe&groupId=xxx  # 필터링 조회
 GET    /api/v1/locations/:id       # 특정 위치 조회
 POST   /api/v1/locations           # 새 위치 생성
 PUT    /api/v1/locations/:id       # 위치 정보 업데이트
 DELETE /api/v1/locations/:id       # 위치 삭제
+
+# 그룹 관련
+GET    /api/v1/location-groups     # 모든 그룹 조회
+POST   /api/v1/location-groups     # 새 그룹 생성
+PUT    /api/v1/location-groups/:id # 그룹 정보 업데이트
+DELETE /api/v1/location-groups/:id # 그룹 삭제
+POST   /api/v1/location-groups/reorder  # 그룹 순서 변경
 ```
 
 ### API 응답 형식
@@ -219,33 +231,44 @@ DELETE /api/v1/locations/:id       # 위치 삭제
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "1",
-      "name": "광화문 카페",
-      "latitude": 37.5665,
-      "longitude": 126.9780,
-      "description": "역사적인 광화문 근처의 아늑한 카페",
-      "category": "cafe",
-      "address": "서울특별시 종로구 세종대로",
-      "createdAt": "2024-01-01T00:00:00Z",
-      "updatedAt": "2024-01-01T00:00:00Z"
+  "data": {
+    "content": [
+      {
+        "id": "1",
+        "name": "광화문 카페",
+        "latitude": 37.5665,
+        "longitude": 126.9780,
+        "description": "역사적인 광화문 근처의 아늑한 카페",
+        "category": "cafe",
+        "address": "서울특별시 종로구 세종대로",
+        "rating": 4.5,
+        "review": "분위기가 좋아요",
+        "groupId": "group-1",
+        "createdAt": "2024-01-01T00:00:00Z",
+        "updatedAt": "2024-01-01T00:00:00Z"
+      }
+    ],
+    "page": {
+      "number": 0,
+      "size": 20,
+      "totalElements": 50,
+      "totalPages": 3
     }
-  ]
+  }
 }
 ```
 
-### 백엔드 API 전환 방법
+### OpenAPI 스펙 업데이트
 
-`src/services/locationService.ts`에서:
+백엔드 API가 변경되면:
 
-```typescript
-// 현재: Mock-first 전략
-return filteredLocations;
+```bash
+# 1. 최신 openapi.yaml 받기
+# 2. API 클라이언트 재생성
+yarn generate:api
 
-// TODO: 백엔드 API 준비시 주석 해제
-// const response = await apiClient.get<LocationResponse[]>(API_ENDPOINTS.LOCATIONS, params);
-// return response.data;
+# 3. 생성된 타입과 함수 자동 적용
+# src/api/generated/ 디렉토리 확인
 ```
 
 ## 🎨 아키텍처 패턴

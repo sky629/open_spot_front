@@ -35,6 +35,8 @@ const calculateLocationCounts = (locations: LocationResponse[]): Record<string, 
 const initialState = {
   locations: [],
   selectedLocation: null,
+  shouldFocusOnMap: false,
+  openInfoWindow: null,
   isLoading: false,
   error: null,
   locationCounts: {},
@@ -65,12 +67,55 @@ export const useLocationStore = create<LocationState>()(
         set((state) => ({
           ...state,
           selectedLocation: location,
+          shouldFocusOnMap: false, // 마커 클릭 시에는 지도 이동 안함
         }));
 
         if (location) {
           logger.info('Location selected', { locationId: location.id });
         } else {
           logger.info('Location selection cleared');
+        }
+      },
+
+      focusLocationOnMap: (location: LocationResponse) => {
+        set((state) => ({
+          ...state,
+          selectedLocation: location,
+          shouldFocusOnMap: true, // 지도 이동 플래그 설정
+        }));
+
+        logger.info('Focus location on map', { locationId: location.id });
+
+        // 플래그를 다시 false로 되돌림 (한 번만 실행되도록)
+        setTimeout(() => {
+          set((state) => ({
+            ...state,
+            shouldFocusOnMap: false,
+          }));
+        }, 100);
+      },
+
+      setOpenInfoWindow: (infoWindow: { close: () => void } | null) => {
+        // 이전 정보창이 있으면 닫기
+        const currentInfoWindow = get().openInfoWindow;
+        if (currentInfoWindow && currentInfoWindow !== infoWindow) {
+          try {
+            currentInfoWindow.close();
+            logger.info('Previous info window closed');
+          } catch (error) {
+            logger.warn('Failed to close previous info window', error);
+          }
+        }
+
+        set((state) => ({
+          ...state,
+          openInfoWindow: infoWindow,
+        }));
+
+        if (infoWindow) {
+          logger.info('Info window reference stored');
+        } else {
+          logger.info('Info window reference cleared');
         }
       },
 
@@ -298,11 +343,125 @@ export const useLocationStore = create<LocationState>()(
         }
       },
 
+      // 장소 수정
+      updateLocation: async (requestData: UpdateLocationRequest) => {
+        if (!locationService) {
+          throw new Error('LocationService not initialized');
+        }
+
+        // 기존 장소 데이터 (그룹 변경 확인용)
+        const originalLocation = get().locations.find(loc => loc.id === requestData.id);
+
+        try {
+          set({ isLoading: true, error: null });
+          logger.info('Updating location', { requestData });
+
+          const updatedLocation = await locationService.updateLocation(requestData);
+
+          // 기존 locations 배열에 수정된 장소 교체
+          const updatedLocations = get().locations.map((location) =>
+            location.id === updatedLocation.id ? updatedLocation : location
+          );
+          const locationCounts = calculateLocationCounts(updatedLocations);
+
+          set({
+            locations: updatedLocations,
+            locationCounts,
+            selectedLocation: updatedLocation, // 수정된 장소로 선택 업데이트
+            isLoading: false,
+          });
+
+          logger.userAction('Location updated successfully', { locationId: updatedLocation.id });
+
+          // 그룹 변경이 있었다면 관련 그룹들 동기화
+          if (originalLocation) {
+            const { useGroupStore } = await import('../group/groupStore');
+            const { updateGroupLocationIds } = useGroupStore.getState();
+
+            const groupsToSync = new Set<string>();
+
+            // 이전 그룹에서 제거되었으면 동기화
+            if (originalLocation.groupId && originalLocation.groupId !== updatedLocation.groupId) {
+              groupsToSync.add(originalLocation.groupId);
+            }
+
+            // 새 그룹에 추가되었으면 동기화
+            if (updatedLocation.groupId && updatedLocation.groupId !== originalLocation.groupId) {
+              groupsToSync.add(updatedLocation.groupId);
+            }
+
+            // 관련 그룹들 동기화
+            for (const groupId of groupsToSync) {
+              logger.info('Syncing group after location update', { groupId });
+              await updateGroupLocationIds(groupId).catch((error) => {
+                logger.error('Failed to sync group after location update', error);
+              });
+            }
+          }
+
+          return updatedLocation;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to update location';
+          set({ error: errorMessage, isLoading: false });
+          logger.error('Failed to update location', error);
+          throw error;
+        }
+      },
+
+      // 장소 삭제
+      deleteLocation: async (id: string) => {
+        if (!locationService) {
+          throw new Error('LocationService not initialized');
+        }
+
+        const location = get().locations.find(loc => loc.id === id);
+        if (!location) {
+          logger.warn('Location not found for deletion', { locationId: id });
+          return;
+        }
+
+        try {
+          set({ isLoading: true, error: null });
+          logger.info('Deleting location', { locationId: id, name: location.name, groupId: location.groupId });
+
+          await locationService.deleteLocation(id);
+
+          // locations 배열에서 삭제된 장소 제거
+          const updatedLocations = get().locations.filter((loc) => loc.id !== id);
+          const locationCounts = calculateLocationCounts(updatedLocations);
+
+          set({
+            locations: updatedLocations,
+            locationCounts,
+            selectedLocation: get().selectedLocation?.id === id ? null : get().selectedLocation,
+            isLoading: false,
+          });
+
+          logger.userAction('Location deleted successfully', { locationId: id, name: location.name });
+
+          // 그룹에 속한 장소였다면 해당 그룹의 locationIds 동기화
+          if (location.groupId) {
+            const { useGroupStore } = await import('../group/groupStore');
+            const { updateGroupLocationIds } = useGroupStore.getState();
+
+            logger.info('Syncing group after location deletion', { groupId: location.groupId });
+            await updateGroupLocationIds(location.groupId).catch((error) => {
+              logger.error('Failed to sync group after location deletion', error);
+            });
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to delete location';
+          set({ error: errorMessage, isLoading: false });
+          logger.error('Failed to delete location', error);
+          throw error;
+        }
+      },
+
       addLocationToGroup: async (requestData: UpdateLocationRequest) => {
         if (!locationService) {
           throw new Error('LocationService not initialized');
         }
-        
+
         try {
           set({ isLoading: true, error: null });
           logger.info('Adding location to group', { requestData });
@@ -317,6 +476,7 @@ export const useLocationStore = create<LocationState>()(
           }));
 
           logger.userAction('Location added to group successfully', { requestData });
+          return updatedLocation;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to add location to group';
           set({ error: errorMessage });

@@ -6,7 +6,7 @@ import { useGroupStore } from '../../stores/group';
 import { useLocationStore } from '../../stores/location';
 import { colors, transitions } from '../../styles';
 import { logger } from '../../utils/logger';
-import type { UpdateLocationRequest } from '../../../types';
+import type { UpdateLocationRequest } from '../../types';
 
 interface AddToGroupModalProps {
   locationId: string;
@@ -21,7 +21,9 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { groups, getGroupsWithLocation, fetchGroups, isLoading } = useGroupStore();
+  const groups = useGroupStore((state) => state.groups);
+  const getGroupsWithLocation = useGroupStore((state) => state.getGroupsWithLocation);
+  const isLoading = useGroupStore((state) => state.isLoading);
   const { addLocationToGroup } = useLocationStore();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -29,13 +31,13 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      // 모달이 열릴 때 그룹 목록 갱신
-      fetchGroups();
+      // 모달이 열릴 때 상태만 초기화 (fetchGroups 호출 안함 - locationIds 유지)
       setSelectedGroupId(null);
       setError(null);
     }
-  }, [isOpen, fetchGroups]);
+  }, [isOpen]);
 
+  // groups가 변경될 때마다 다시 계산
   const groupsWithLocation = getGroupsWithLocation(locationId);
   const groupsWithLocationIds = new Set(groupsWithLocation.map(g => g.id));
 

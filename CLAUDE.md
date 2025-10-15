@@ -183,10 +183,14 @@ The application uses a custom DI container (`src/core/container/Container.ts`):
 - Prevents infinite loops with state equality checks
 
 **Location Store** (`src/stores/location/locationStore.ts`):
-- Location data management
+- Location data management with real-time counts
 - Map bounds and filtering
 - CRUD operations for locations
 - Group association (addLocationToGroup, removeLocationFromGroup)
+- Map navigation control:
+  - `setSelectedLocation`: Select location without map panning
+  - `focusLocationOnMap`: Select location with map pan animation
+  - `shouldFocusOnMap` flag: Controls automatic map panning behavior
 
 **Group Store** (`src/stores/group/groupStore.ts`):
 - Group CRUD operations with backend API
@@ -285,11 +289,25 @@ await updateGroupLocationIds(groupId);
 - No manual array manipulation bugs
 - Backend is authoritative for membership
 
-### Sidebar Category System
+**Important**: Avoid calling `fetchGroups()` in modals or components that display group counts. The `fetchGroups()` API call returns groups without `locationIds`, which resets the count to 0. Instead, use the groups already in the store, which have been properly synchronized with `updateGroupLocationIds()`.
+
+### Sidebar System
 - **Toggleable UI**: Desktop sidebar, mobile overlay with backdrop
-- **Real-time Counts**: Category counts calculated from actual location data
+- **Real-time Counts**: Both category and location counts displayed in sidebar headers
+  - Groups: `그룹명 (개수)` format
+  - Locations: `내 장소들 (개수)` format
+- **Category Filtering**: Dropdown in top navigation bar
 - **Category Constants**: Centralized in `MAP_CATEGORIES` (all, restaurant, cafe, shopping, park)
 - **Responsive Design**: Adapts layout for mobile and desktop viewing
+
+### Map Navigation Features
+- **Location Focus**: "지도에서 보기" button in location details pans map to location
+  - Uses `focusLocationOnMap()` action with `shouldFocusOnMap` flag
+  - Prevents automatic panning on marker clicks (only shows info window)
+  - Smooth 500ms animation with zoom level 15 for detail view
+- **Map Controls**: Positioned at top center of map
+  - Shows current location count: "📍 N개 저장"
+  - Loading indicator during data fetch
 
 ### Secure API Client
 - JWT token attachment

@@ -2,13 +2,14 @@
 
 import React from 'react';
 import styled from 'styled-components';
-import { useLocationFilters } from '../../stores/location';
+import { useLocationFilters, useLocations } from '../../stores/location';
 import { useCategories } from '../../stores/category';
 import { colors } from '../../styles';
 import { LocationList } from './LocationList';
 
 export const LocationSection: React.FC = () => {
   const { currentCategory } = useLocationFilters();
+  const locations = useLocations();
   const categories = useCategories();
 
   const getCurrentCategoryDisplay = () => {
@@ -22,7 +23,10 @@ export const LocationSection: React.FC = () => {
   return (
     <Container>
       <Header>
-        <Title>내 장소들</Title>
+        <TitleWithCount>
+          <Title>내 장소들</Title>
+          <Count>({locations?.length || 0})</Count>
+        </TitleWithCount>
         <CategoryLabel>
           {getCurrentCategoryDisplay()}
         </CategoryLabel>
@@ -45,11 +49,23 @@ const Header = styled.div`
   padding: 0 1rem;
 `;
 
+const TitleWithCount = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+`;
+
 const Title = styled.h3`
   font-size: 1rem;
   font-weight: 600;
   color: ${colors.text.primary};
   margin: 0;
+`;
+
+const Count = styled.span`
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: ${colors.text.secondary};
 `;
 
 const CategoryLabel = styled.span`
