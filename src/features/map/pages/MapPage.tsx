@@ -1,9 +1,9 @@
 // Map Page Component with New Layout
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer } from '../components';
+import { MapContainer, type MapContainerRef } from '../components';
 import { UserProfile } from '../../auth/components';
 import { CategoryDropdown } from '../../../components/common/CategoryDropdown';
 import { GroupSection } from '../../../components/Sidebar/GroupSection';
@@ -22,6 +22,8 @@ export const MapPage: React.FC = () => {
   const user = useUser();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
+  const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
+  const mapContainerRef = useRef<MapContainerRef>(null);
   const fetchGroups = useGroupStore((state) => state.fetchGroups);
   const fetchCategories = useCategoryStore((state) => state.fetchCategories);
 
@@ -84,6 +86,56 @@ export const MapPage: React.FC = () => {
     logger.userAction('Home button clicked');
   };
 
+  const handleCurrentLocation = () => {
+    logger.userAction('Current location button clicked');
+    setIsLoadingLocation(true);
+
+    if (!navigator.geolocation) {
+      logger.error('Geolocation is not supported by this browser');
+      alert('이 브라우저는 위치 정보를 지원하지 않습니다.');
+      setIsLoadingLocation(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        logger.info('Current location retrieved', { latitude, longitude });
+
+        // MapContainer의 panToLocation 메서드 호출
+        if (mapContainerRef.current) {
+          mapContainerRef.current.panToLocation(latitude, longitude, 15);
+        }
+
+        setIsLoadingLocation(false);
+      },
+      (error) => {
+        logger.error('Failed to get current location', error);
+        let errorMessage = '현재 위치를 가져올 수 없습니다.';
+
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = '위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해주세요.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = '위치 정보를 사용할 수 없습니다.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = '위치 정보 요청이 시간 초과되었습니다.';
+            break;
+        }
+
+        alert(errorMessage);
+        setIsLoadingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
+
   return (
     <PageContainer>
       {/* 상단 네비게이션 바 */}
@@ -143,19 +195,29 @@ export const MapPage: React.FC = () => {
         {/* 메인 콘텐츠 영역 */}
         <MainContent>
           <ContentArea>
-            <MapContainer onLocationSelect={handleLocationSelect} />
+            <MapContainer ref={mapContainerRef} onLocationSelect={handleLocationSelect} />
 
-            <MapControls>
-              <ControlButton title="현재 위치">
-                📍
-              </ControlButton>
-              <ControlButton title="길찾기">
-                🧭
-              </ControlButton>
-              <ControlButton title="즐겨찾기">
-                ⭐
-              </ControlButton>
-            </MapControls>
+            {/* 현재 위치 버튼 */}
+            <CurrentLocationButton
+              onClick={handleCurrentLocation}
+              disabled={isLoadingLocation}
+              title="현재 위치로 이동"
+            >
+              {isLoadingLocation ? (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="#A394E8" strokeWidth="2"/>
+                </svg>
+              ) : (
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="3" fill="#8B7FD6"/>
+                  <circle cx="12" cy="12" r="9" stroke="#8B7FD6" strokeWidth="2"/>
+                  <line x1="12" y1="1" x2="12" y2="4" stroke="#8B7FD6" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="12" y1="20" x2="12" y2="23" stroke="#8B7FD6" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="1" y1="12" x2="4" y2="12" stroke="#8B7FD6" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="20" y1="12" x2="23" y2="12" stroke="#8B7FD6" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              )}
+            </CurrentLocationButton>
           </ContentArea>
         </MainContent>
       </MainLayout>
@@ -410,50 +472,6 @@ const SearchButton = styled.button`
   }
 `;
 
-const MapControls = styled.div`
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  z-index: 1001;
-
-  @media (max-width: 768px) {
-    bottom: 16px;
-    left: 16px;
-  }
-`;
-
-const ControlButton = styled.button`
-  width: 48px;
-  height: 48px;
-  background: white;
-  border: 1px solid #e8e8e8;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
-  font-size: 18px;
-  color: #666;
-
-  &:hover {
-    background: #f8f9fa;
-    border-color: #03C75A;
-    color: #03C75A;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  }
-
-  @media (max-width: 768px) {
-    width: 44px;
-    height: 44px;
-    font-size: 16px;
-  }
-`;
-
 const SidebarHeader = styled.div`
   padding: 1.25rem;
   border-bottom: 1px solid #e5e7eb;
@@ -481,4 +499,43 @@ const Divider = styled.div`
   height: 1px;
   background-color: ${colors.border.secondary};
   margin: 0.5rem 1rem;
+`;
+
+const CurrentLocationButton = styled.button<{ disabled?: boolean }>`
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 48px;
+  height: 48px;
+  background: white;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  font-size: 20px;
+  z-index: 1001;
+  opacity: ${props => props.disabled ? 0.6 : 1};
+
+  &:hover:not(:disabled) {
+    background: ${colors.primary.subtle};
+    border-color: ${colors.primary.main};
+    box-shadow: ${colors.shadow.purple};
+    transform: scale(1.05);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.95);
+  }
+
+  @media (max-width: 768px) {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+    bottom: 16px;
+    left: 16px;
+  }
 `;

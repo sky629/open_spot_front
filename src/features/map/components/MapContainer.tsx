@@ -1,6 +1,6 @@
 // Map Container Component
 
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import styled from 'styled-components';
 import { useLocations, useLocationStore } from '../../../stores/location';
 import { LocationMarker } from './LocationMarker';
@@ -14,10 +14,14 @@ interface MapContainerProps {
   className?: string;
 }
 
-export const MapContainer: React.FC<MapContainerProps> = ({
+export interface MapContainerRef {
+  panToLocation: (lat: number, lng: number, zoom?: number) => void;
+}
+
+export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
   onLocationSelect,
   className
-}) => {
+}, ref) => {
   logger.info('🚀 MapContainer component rendering...');
 
   const [isMapLoaded, setIsMapLoaded] = useState(false);
@@ -45,6 +49,30 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       zoomControl: true,
     }
   });
+
+  // Expose map control methods via ref
+  useImperativeHandle(ref, () => ({
+    panToLocation: (lat: number, lng: number, zoom?: number) => {
+      if (!map || !isLoaded) {
+        logger.warn('Map not loaded yet');
+        return;
+      }
+
+      const newCenter = new window.naver.maps.LatLng(lat, lng);
+
+      // 줌 레벨이 지정된 경우, 먼저 줌을 설정하고 애니메이션 없이 이동
+      if (zoom !== undefined) {
+        map.setZoom(zoom);
+      }
+
+      // 그 다음 부드럽게 중심 이동
+      setTimeout(() => {
+        map.panTo(newCenter, { duration: 500 });
+      }, 100);
+
+      logger.info('Map panned to location', { lat, lng, zoom });
+    }
+  }), [map, isLoaded]);
 
   // bounds가 유의미하게 변경되었는지 확인하는 함수 - useCallback으로 메모이제이션
   const hasBoundsChanged = useCallback((newBounds: {ne: {lat: number, lng: number}, sw: {lat: number, lng: number}}) => {
@@ -277,7 +305,7 @@ export const MapContainer: React.FC<MapContainerProps> = ({
       />
     </Container>
   );
-};
+});
 
 const Container = styled.div`
   position: relative;
