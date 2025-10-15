@@ -4,17 +4,24 @@ React TypeScript 기반의 위치 정보 공유 플랫폼 프론트엔드입니�
 
 ## 🚀 주요 기능
 
-- **🔐 Google OAuth 인증**: 간편한 구글 계정 로그인
+- **🔐 Google OAuth 인증**: 간편한 구글 계정 로그인 (HttpOnly Cookie + Bearer Token)
 - **📍 네이버 지도 연동**: 네이버 클라우드 플랫폼 Maps API v3 활용
 - **🎯 카테고리별 마커 표시**: 음식점, 카페, 쇼핑, 공원 등 카테고리별 SVG 마커
 - **📱 반응형 사이드바**: 데스크톱 사이드바, 모바일 오버레이 UI
 - **🏷️ 그룹 관리**: 장소를 그룹으로 분류하고 실시간 개수 표시
-- **📊 실시간 카운트**: 그룹별, 카테고리별 장소 개수 자동 업데이트
-- **🗺️ 지도 네비게이션**: "지도에서 보기" 버튼으로 장소로 즉시 이동
+- **📊 실시간 카운트**: 그룹별, 장소별 개수 자동 업데이트 (사이드바 헤더)
+- **🗺️ 지도 네비게이션**:
+  - "지도에서 보기" 버튼으로 장소로 즉시 이동 (부드러운 애니메이션)
+  - 마커 클릭 시에는 정보창만 표시 (자동 이동 안함)
+  - 지도 중앙 상단에 현재 저장된 장소 개수 표시
 - **💬 정보창**: 마커 클릭 시 위치 상세 정보 표시
 - **✏️ 장소 관리**: 추가, 수정, 삭제, 그룹 할당 등 완전한 CRUD
+  - 모달 기반 수정/삭제 확인 UI
+  - 그룹 추가/제거 기능
+  - 평점, 리뷰, 태그 지원
 - **🏗️ 의존성 주입**: Clean Architecture 기반 서비스 계층
 - **🔄 API 코드 자동 생성**: Orval로 OpenAPI 스펙에서 타입 안전한 클라이언트 생성
+- **🔄 백엔드 동기화**: 그룹-장소 관계를 백엔드를 Single Source of Truth로 관리
 
 ## 🛠️ 기술 스택
 
@@ -205,28 +212,62 @@ src/
 
 ```
 # 인증 관련
-POST   /api/v1/auth/login          # Google OAuth 로그인
-POST   /api/v1/auth/refresh        # JWT 토큰 갱신
-POST   /api/v1/auth/logout         # 로그아웃
-GET    /api/v1/auth/user           # 사용자 정보 조회
+GET    /api/v1/auth/google/login   # Google OAuth2 로그인 시작
+POST   /api/v1/auth/token/refresh  # JWT 토큰 갱신 (HttpOnly Cookie 사용)
+POST   /api/v1/auth/logout         # 로그아웃 (Refresh Token 무효화)
+
+# 사용자 관련
+GET    /api/v1/users/self          # 현재 사용자 프로필 조회
+GET    /api/v1/users/:userId       # 특정 사용자 프로필 조회
+
+# 카테고리 관련
+GET    /api/v1/categories          # 카테고리 목록 조회 (인증 불필요)
 
 # 위치 관련
-GET    /api/v1/locations           # 모든 위치 조회 (페이지네이션)
-GET    /api/v1/locations?category=cafe&groupId=xxx  # 필터링 조회
-GET    /api/v1/locations/:id       # 특정 위치 조회
-POST   /api/v1/locations           # 새 위치 생성
-PUT    /api/v1/locations/:id       # 위치 정보 업데이트
-DELETE /api/v1/locations/:id       # 위치 삭제
+GET    /api/v1/locations           # 장소 목록 조회 (다양한 필터 지원)
+  # Query Parameters:
+  # - northEastLat, northEastLon, southWestLat, southWestLon: 지도 영역 검색
+  # - latitude, longitude, radiusMeters: 반경 검색
+  # - categoryId: 카테고리 필터
+  # - groupId: 그룹 필터
+  # - keyword: 키워드 검색
+  # - sortBy: 정렬 (RATING | CREATED_AT)
+  # - page, size: 페이지네이션
+GET    /api/v1/locations/self      # 내 장소 목록 조회 (본인만)
+GET    /api/v1/locations/:id       # 장소 상세 조회
+POST   /api/v1/locations           # 새 장소 생성
+PUT    /api/v1/locations/:id       # 장소 정보 통합 수정 (부분 업데이트 지원)
+DELETE /api/v1/locations/:id       # 장소 비활성화 (논리적 삭제)
 
 # 그룹 관련
-GET    /api/v1/location-groups     # 모든 그룹 조회
-POST   /api/v1/location-groups     # 새 그룹 생성
-PUT    /api/v1/location-groups/:id # 그룹 정보 업데이트
-DELETE /api/v1/location-groups/:id # 그룹 삭제
-POST   /api/v1/location-groups/reorder  # 그룹 순서 변경
+GET    /api/v1/locations/groups    # 그룹 목록 조회
+POST   /api/v1/locations/groups    # 새 그룹 생성
+PUT    /api/v1/locations/groups/:id # 그룹 정보 수정
+DELETE /api/v1/locations/groups/:id # 그룹 삭제
+PUT    /api/v1/locations/groups/reorder  # 그룹 순서 변경
+
+# 알림 관련
+POST   /api/v1/notifications/tokens  # FCM 디바이스 토큰 등록
+GET    /api/v1/notifications         # 알림 목록 조회
+GET    /api/v1/notifications/unread-count  # 읽지 않은 알림 개수
+PUT    /api/v1/notifications/:id/read      # 알림 읽음 처리
+GET    /api/v1/notifications/settings      # 알림 설정 조회
+PUT    /api/v1/notifications/settings      # 알림 설정 업데이트
 ```
 
 ### API 응답 형식
+
+모든 API는 표준 응답 형식을 따릅니다:
+
+```json
+{
+  "success": true,
+  "data": { /* 실제 데이터 */ },
+  "error": null
+}
+```
+
+#### 장소 목록 조회 응답 예시
 
 ```json
 {
@@ -234,29 +275,60 @@ POST   /api/v1/location-groups/reorder  # 그룹 순서 변경
   "data": {
     "content": [
       {
-        "id": "1",
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "userId": "9f67c2ff-3b2a-4975-b12f-e6c8d40b97b1",
         "name": "광화문 카페",
-        "latitude": 37.5665,
-        "longitude": 126.9780,
         "description": "역사적인 광화문 근처의 아늑한 카페",
-        "category": "cafe",
-        "address": "서울특별시 종로구 세종대로",
+        "address": "서울특별시 종로구 세종대로 172",
+        "categoryId": "category-id",
+        "category": {
+          "id": "category-id",
+          "code": "cafe",
+          "displayName": "카페",
+          "icon": "☕",
+          "color": "#8B4513"
+        },
+        "coordinates": {
+          "latitude": 37.5665,
+          "longitude": 126.9780
+        },
+        "iconUrl": "https://example.com/cafe-icon.png",
         "rating": 4.5,
-        "review": "분위기가 좋아요",
-        "groupId": "group-1",
+        "review": "분위기가 좋고 커피가 맛있어요",
+        "tags": ["조용한", "작업하기좋은", "창가자리"],
+        "groupId": "group-id",
+        "isActive": true,
         "createdAt": "2024-01-01T00:00:00Z",
-        "updatedAt": "2024-01-01T00:00:00Z"
+        "updatedAt": "2024-01-15T10:30:00Z",
+        "distance": 523.45
       }
     ],
     "page": {
       "number": 0,
       "size": 20,
       "totalElements": 50,
-      "totalPages": 3
+      "totalPages": 3,
+      "first": true,
+      "last": false
     }
   }
 }
 ```
+
+#### 토큰 갱신 응답 예시
+
+```json
+{
+  "success": true,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzUxMiJ9...",
+    "accessTokenExpiresIn": 3600000,
+    "message": "Token refreshed successfully"
+  }
+}
+```
+
+**Note**: Refresh Token은 HttpOnly Cookie로 자동 설정되며, 응답 본문에 포함되지 않습니다.
 
 ### OpenAPI 스펙 업데이트
 
