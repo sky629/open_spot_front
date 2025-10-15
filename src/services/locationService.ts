@@ -204,4 +204,18 @@ export class LocationService implements ILocationService {
       groupId,
     });
   }
+
+  /**
+   * 그룹에 장소 추가
+   */
+  async addLocationToGroup(requestData: UpdateLocationRequest): Promise<LocationResponse> {
+      return await this.updateLocation(requestData);
+  }
+
+  /**
+   * 그룹에서 장소 제거
+   */
+  async removeLocationFromGroup(requestData: UpdateLocationRequest): Promise<LocationResponse> {
+    return await this.updateLocation(requestData);
+  }
 }

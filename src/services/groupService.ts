@@ -125,59 +125,6 @@ export class GroupService implements IGroupService {
   }
 
   /**
-   * 그룹에 장소 추가
-   */
-  async addLocationToGroup(groupId: string, locationId: string): Promise<Group> {
-    try {
-      logger.debug('Adding location to group', { groupId, locationId });
-
-      // OpenAPI에 개별 장소 추가 API가 없으므로
-      // 현재 그룹을 가져와서 locationIds 배열에 추가 후 전체 업데이트
-      const group = await this.getGroupById(groupId);
-
-      if (group.locationIds?.includes(locationId)) {
-        logger.info('Location already in group', { groupId, locationId });
-        return group;
-      }
-
-      const updatedGroup = await this.updateGroup(groupId, {
-        name: group.name,
-        color: group.color || '#8B7FD6',
-      });
-
-      logger.info('Location added to group successfully', { groupId, locationId });
-      return updatedGroup;
-    } catch (error) {
-      logger.error('Error adding location to group', error);
-      throw error;
-    }
-  }
-
-  /**
-   * 그룹에서 장소 제거
-   */
-  async removeLocationFromGroup(groupId: string, locationId: string): Promise<Group> {
-    try {
-      logger.debug('Removing location from group', { groupId, locationId });
-
-      // OpenAPI에 개별 장소 제거 API가 없으므로
-      // 현재 그룹을 가져와서 locationIds 배열에서 제거 후 전체 업데이트
-      const group = await this.getGroupById(groupId);
-
-      const updatedGroup = await this.updateGroup(groupId, {
-        name: group.name,
-        color: group.color || '#8B7FD6',
-      });
-
-      logger.info('Location removed from group successfully', { groupId, locationId });
-      return updatedGroup;
-    } catch (error) {
-      logger.error('Error removing location from group', error);
-      throw error;
-    }
-  }
-
-  /**
    * 그룹 순서 변경
    */
   async reorderGroups(groupOrders: Array<{ groupId: string; order: number }>): Promise<void> {

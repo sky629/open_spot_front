@@ -5,6 +5,10 @@ import { persist, devtools } from 'zustand/middleware';
 import { Group, GroupCreateRequest, GroupUpdateRequest, GroupUIState } from '../../types/group';
 import { logger } from '../../utils/logger';
 import type { IGroupService } from '../../core/interfaces/IGroupService';
+import type { ILocationService } from '../../core/interfaces/ILocationService';
+import { useLocationStore } from '../location';
+import { container } from '../../core/container';
+import { SERVICE_TOKENS } from '../../core/container/ServiceTokens';
 
 // 의존성 주입을 위한 서비스 참조
 let groupService: IGroupService | null = null;
@@ -31,9 +35,8 @@ interface GroupStore {
   deleteGroup: (id: string) => Promise<void>;
   selectGroup: (id: string | null) => void;
 
-  // Location management
-  addLocationToGroup: (groupId: string, locationId: string) => Promise<void>;
-  removeLocationFromGroup: (groupId: string, locationId: string) => Promise<void>;
+  // Location management (backend sync)
+  updateGroupLocationIds: (groupId: string) => Promise<void>;
 
   // UI actions
   setUIState: (state: Partial<GroupUIState>) => void;
@@ -159,8 +162,20 @@ export const useGroupStore = create<GroupStore>()(
 
           try {
             set({ isLoading: true, error: null });
-            logger.info('Deleting group', { groupId: id });
+            logger.info('Deleting group', { groupId: id, locationCount: group.locationIds?.length || 0 });
 
+            // 1. 그룹에 속한 장소들의 groupId를 null로 초기화
+            const locationIds = group.locationIds || [];
+            const locationStore = useLocationStore.getState();
+
+            for (const locationId of locationIds) {
+              await locationStore.removeLocationFromGroup({
+                id: locationId,
+                groupId: null
+              });
+            }
+
+            // 2. 그룹 삭제
             await groupService.deleteGroup(id);
 
             set((state) => ({
@@ -170,7 +185,11 @@ export const useGroupStore = create<GroupStore>()(
               ui: { ...state.ui, showDeleteConfirm: null }
             }));
 
-            logger.userAction('Group deleted', { groupId: id, name: group.name });
+            logger.userAction('Group deleted with locations cleanup', {
+              groupId: id,
+              name: group.name,
+              cleanedLocationCount: locationIds.length
+            });
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to delete group';
             set({ error: errorMessage, isLoading: false });
@@ -184,59 +203,32 @@ export const useGroupStore = create<GroupStore>()(
           logger.userAction('Group selected', { groupId: id });
         },
 
-        // Location management
-        addLocationToGroup: async (groupId: string, locationId: string) => {
-          if (!groupService) {
-            logger.error('Group service not initialized');
-            return;
-          }
-
+        // Location management (backend sync)
+        updateGroupLocationIds: async (groupId: string) => {
           try {
-            set({ isLoading: true, error: null });
-            logger.info('Adding location to group', { groupId, locationId });
+            // locationService를 DI container에서 직접 조회
+            const locationService = container.resolve<ILocationService>(SERVICE_TOKENS.LOCATION_SERVICE);
 
-            const updatedGroup = await groupService.addLocationToGroup(groupId, locationId);
+            // 백엔드에서 해당 그룹의 장소 목록 조회
+            const locations = await locationService.getLocations({ groupId });
+
+            // 조회된 장소 ID 배열로 업데이트
+            const locationIds = locations.map(loc => loc.id);
 
             set((state) => ({
               groups: state.groups.map((group) =>
-                group.id === groupId ? updatedGroup : group
+                group.id === groupId
+                  ? { ...group, locationIds }
+                  : group
               ),
-              isLoading: false
             }));
 
-            logger.userAction('Location added to group', { groupId, locationId });
+            logger.debug('Group locationIds updated from backend', {
+              groupId,
+              locationCount: locationIds.length
+            });
           } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to add location to group';
-            set({ error: errorMessage, isLoading: false });
-            logger.error('Failed to add location to group', error);
-            throw error;
-          }
-        },
-
-        removeLocationFromGroup: async (groupId: string, locationId: string) => {
-          if (!groupService) {
-            logger.error('Group service not initialized');
-            return;
-          }
-
-          try {
-            set({ isLoading: true, error: null });
-            logger.info('Removing location from group', { groupId, locationId });
-
-            const updatedGroup = await groupService.removeLocationFromGroup(groupId, locationId);
-
-            set((state) => ({
-              groups: state.groups.map((group) =>
-                group.id === groupId ? updatedGroup : group
-              ),
-              isLoading: false
-            }));
-
-            logger.userAction('Location removed from group', { groupId, locationId });
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to remove location from group';
-            set({ error: errorMessage, isLoading: false });
-            logger.error('Failed to remove location from group', error);
+            logger.error('Failed to update group locationIds', error);
             throw error;
           }
         },

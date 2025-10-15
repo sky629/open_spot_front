@@ -44,10 +44,22 @@ export const MapPage: React.FC = () => {
         logger.error('Failed to load categories', error);
       });
 
-      // 그룹 로드
-      fetchGroups().catch((error) => {
-        logger.error('Failed to load groups', error);
-      });
+      // 그룹 로드 후 각 그룹의 locationIds 동기화
+      fetchGroups()
+        .then(() => {
+          const { groups, updateGroupLocationIds } = useGroupStore.getState();
+          logger.info(`Syncing locationIds for ${groups.length} groups`);
+
+          // 각 그룹의 장소 개수 동기화
+          groups.forEach((group) => {
+            updateGroupLocationIds(group.id).catch((error) => {
+              logger.error(`Failed to sync locationIds for group ${group.id}`, error);
+            });
+          });
+        })
+        .catch((error) => {
+          logger.error('Failed to load groups', error);
+        });
     }
   }, [user, fetchGroups, fetchCategories]);
 

@@ -29,16 +29,6 @@ export interface IGroupService {
   deleteGroup(id: string): Promise<void>;
 
   /**
-   * 그룹에 장소 추가
-   */
-  addLocationToGroup(groupId: string, locationId: string): Promise<Group>;
-
-  /**
-   * 그룹에서 장소 제거
-   */
-  removeLocationFromGroup(groupId: string, locationId: string): Promise<Group>;
-
-  /**
    * 그룹 순서 변경
    */
   reorderGroups(groupOrders: Array<{ groupId: string; order: number }>): Promise<void>;

@@ -3,7 +3,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { LocationState } from './types';
-import type { LocationResponse, GetLocationsParams, CreateLocationRequest } from '../../types';
+import type { LocationResponse, GetLocationsParams, CreateLocationRequest, UpdateLocationRequest } from '../../types';
 import type { ILocationService } from '../../core/interfaces';
 import { logger } from '../../utils/logger';
 
@@ -16,6 +16,7 @@ let isFetchingByBounds = false;
 
 export const setLocationServiceForStore = (service: ILocationService) => {
   locationService = service;
+  logger.info('✅ Location service injected into store');
 };
 
 // 위치 개수 계산 유틸리티
@@ -296,9 +297,70 @@ export const useLocationStore = create<LocationState>()(
           throw error;
         }
       },
+
+      addLocationToGroup: async (requestData: UpdateLocationRequest) => {
+        if (!locationService) {
+          throw new Error('LocationService not initialized');
+        }
+        
+        try {
+          set({ isLoading: true, error: null });
+          logger.info('Adding location to group', { requestData });
+
+          const updatedLocation = await locationService.addLocationToGroup(requestData);
+
+          // 기존 locations 배열에 수정된 장소 교체
+          set((state) => ({
+            locations: state.locations.map((location) =>
+              location.id === updatedLocation.id ? updatedLocation : location
+            ),
+          }));
+
+          logger.userAction('Location added to group successfully', { requestData });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to add location to group';
+          set({ error: errorMessage });
+          logger.error('Failed to add location to group', error);
+          throw error;
+        } finally {
+            set({ isLoading: false });
+        }
+      },
+
+      removeLocationFromGroup: async (requestData: UpdateLocationRequest) => {
+        if (!locationService) {
+          throw new Error('LocationService not initialized');
+        }
+
+        try {
+          set({ isLoading: true, error: null });
+          logger.info('Removing location from group', { requestData });
+
+          const updatedLocation = await locationService.removeLocationFromGroup(requestData);
+
+          // 기존 locations 배열에 수정된 장소 교체
+          set((state) => ({
+            locations: state.locations.map((location) =>
+              location.id === updatedLocation.id ? updatedLocation : location
+            ),
+          }));
+
+          logger.info('Location removed from group successfully.', { requestData });
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to remove location from group';
+          set({ error: errorMessage });
+          logger.error('Failed to remove location from group', error);
+          throw error;
+        } finally {
+          set({ isLoading: false });
+        }
+      },
+
     }),
     {
       name: 'location-store',
     }
   )
+
+  
 );

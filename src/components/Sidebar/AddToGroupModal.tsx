@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useGroupStore } from '../../stores/group';
+import { useLocationStore } from '../../stores/location';
 import { colors, transitions } from '../../styles';
 import { logger } from '../../utils/logger';
+import type { UpdateLocationRequest } from '../../../types';
 
 interface AddToGroupModalProps {
   locationId: string;
@@ -19,7 +21,8 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { groups, addLocationToGroup, getGroupsWithLocation, fetchGroups, isLoading } = useGroupStore();
+  const { groups, getGroupsWithLocation, fetchGroups, isLoading } = useGroupStore();
+  const { addLocationToGroup } = useLocationStore();
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,10 +52,16 @@ export const AddToGroupModal: React.FC<AddToGroupModalProps> = ({
       setError(null);
       logger.info('Adding location to group', { locationId, groupId: selectedGroupId });
 
-      await addLocationToGroup(selectedGroupId, locationId);
+      const requestData: UpdateLocationRequest = {
+        id: locationId,
+        groupId: selectedGroupId,
+      };
 
-      // 그룹 목록 재조회 (locationIds 업데이트 반영)
-      await fetchGroups();
+      await addLocationToGroup(requestData);
+
+      // 백엔드에서 최신 장소 개수 조회 및 업데이트
+      const { updateGroupLocationIds } = useGroupStore.getState();
+      await updateGroupLocationIds(selectedGroupId);
 
       logger.userAction('Location added to group successfully', { locationId, groupId: selectedGroupId });
       onClose();

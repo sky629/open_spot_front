@@ -42,4 +42,14 @@ export interface ILocationService {
     category?: string,
     groupId?: string
   ): Promise<LocationResponse[]>;
+
+  /**
+   * 그룹에 장소 추가
+   */
+  addLocationToGroup(requestData: UpdateLocationRequest): Promise<LocationResponse>;
+
+  /**
+   * 그룹에서 장소 제거
+   */
+  removeLocationFromGroup(requestData: UpdateLocationRequest): Promise<LocationResponse>;
 }

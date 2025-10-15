@@ -34,6 +34,9 @@ yarn type-check
 # Linting
 yarn lint
 
+# Generate API client from OpenAPI spec
+yarn generate:api
+
 # Kill development servers (includes port cleanup)
 yarn kill:servers
 
@@ -126,34 +129,38 @@ VITE_OAUTH_REDIRECT_URI=http://localhost:8080/login/oauth2/code/google
 
 ```
 src/
-├── components/         # Reusable UI components
-│   ├── Map/           # Map-related components
-│   │   ├── MapContainer.tsx    # Main map container with markers
-│   │   └── LocationMarker.tsx  # Individual location markers
-│   ├── Sidebar/       # Sidebar navigation components
-│   │   ├── Sidebar.tsx         # Main sidebar with category filtering
-│   │   └── SidebarItem.tsx     # Individual category items with counts
-│   └── common/        # Common UI components
-├── pages/             # Page components
-│   ├── LoginPage.tsx          # Google OAuth login
-│   ├── AuthCallbackPage.tsx   # OAuth callback handler
-│   └── MapPage.tsx            # Main map page with sidebar
-├── hooks/             # Custom React hooks
-│   ├── useLocations.ts        # Location data management with category counts
-│   ├── useNaverMap.ts         # Naver Maps instance management
-│   └── useAuth.ts             # Authentication state management
-├── services/          # External API services
-│   ├── locationService.ts     # Location CRUD with mock-first strategy
-│   ├── authService.ts         # Google OAuth integration
-│   └── api.ts                 # Base API client with interceptors
-├── stores/            # Zustand stores (legacy, being replaced by hooks)
-├── contexts/          # React Context providers
-│   └── AuthContext.tsx        # Authentication context
+├── features/          # Feature modules
+│   ├── auth/         # Authentication feature
+│   │   ├── components/      # Login, ProtectedRoute
+│   │   ├── pages/          # LoginPage, LoginErrorPage
+│   │   └── services/       # AuthServiceImpl
+│   └── map/          # Map feature
+│       ├── components/      # MapContainer, LocationMarker, CategoryFilter
+│       └── pages/          # MapPage
+├── components/        # Shared UI components
+│   ├── Sidebar/      # GroupSection, LocationSection, LocationItem
+│   └── common/       # CategoryDropdown, SearchableDropdown
+├── shared/            # Shared utilities
+│   └── components/   # LoadingSpinner, ErrorBoundary
+├── api/               # Generated API client (Orval)
+│   └── generated/    # Auto-generated from openapi.yaml
+├── stores/            # Zustand stores
+│   ├── auth/         # Authentication store with service injection
+│   ├── location/     # Location store
+│   ├── group/        # Group store with locationIds sync
+│   └── category/     # Category store
+├── services/          # Service layer
+│   ├── locationService.ts  # Location CRUD operations
+│   ├── groupService.ts     # Group management
+│   └── categoryService.ts  # Category operations
+├── core/              # Core architecture
+│   ├── container/    # Dependency injection container
+│   └── interfaces/   # Service interfaces (ILocationService, IGroupService)
 ├── constants/         # Application constants
-│   ├── map.ts                 # Map config, categories, marker icons
-│   └── api.ts                 # API endpoints
+│   ├── map.ts        # Map config, categories, marker icons
+│   └── api.ts        # API endpoints
 ├── types/             # TypeScript type definitions
-├── utils/             # Utility functions
+├── utils/             # Utility functions (logger, cookies)
 └── setup/             # Application initialization
 ```
 
@@ -179,6 +186,14 @@ The application uses a custom DI container (`src/core/container/Container.ts`):
 - Location data management
 - Map bounds and filtering
 - CRUD operations for locations
+- Group association (addLocationToGroup, removeLocationFromGroup)
+
+**Group Store** (`src/stores/group/groupStore.ts`):
+- Group CRUD operations with backend API
+- Group location membership tracking via `locationIds` array
+- Backend sync pattern: `updateGroupLocationIds(groupId)` queries actual locations from backend
+- UI state management (modals, editing, deletion confirmation)
+- Group deletion automatically cleans up location `groupId` references
 
 ### Authentication Flow
 
@@ -220,20 +235,55 @@ export const initializeApplication = async (): Promise<void> => {
 
 ## Key Service Patterns
 
-### Mock-First Development Strategy
-The application implements a mock-first approach in `locationService.ts`:
-- **Immediate Mock Response**: Returns mock data instantly instead of attempting API calls
-- **23 Seoul Locations**: Real location data categorized as restaurant (8), cafe (5), shopping (5), park (5)
-- **Category Filtering**: Mock data supports category-based filtering
-- **Easy API Migration**: Commented production API code ready for backend integration
+### API Client Generation with Orval
+The application uses **Orval** to auto-generate TypeScript API clients from `openapi.yaml`:
+- **Source**: `openapi.yaml` in project root defines all backend endpoints
+- **Generation**: `yarn generate:api` creates type-safe clients in `src/api/generated/`
+- **Integration**: Services wrap generated clients for additional logic
+- **Benefits**: Type safety, automatic updates when backend changes, reduced boilerplate
 
-```typescript
-// Current: Mock-first strategy
-return filteredLocations;
+Example workflow:
+```bash
+# 1. Backend team updates openapi.yaml
+# 2. Run generation command
+yarn generate:api
 
-// TODO: Backend API (ready to uncomment when /api/v1/locations is implemented)
-// const response = await apiClient.get<LocationResponse[]>(API_ENDPOINTS.LOCATIONS, params);
+# 3. Generated clients available immediately
+import { getLocations } from 'src/api/generated/locations/locations';
 ```
+
+### Backend API Integration Pattern
+All services use backend APIs with fallback to mock data:
+```typescript
+// locationService.ts pattern
+try {
+  const response = await locationsApi.getLocations(params);
+  if (response.success && response.data) {
+    const data = response.data.content || []; // Handle pagination
+    return data.map(transformLocationResponse);
+  }
+} catch (error) {
+  logger.error('API error, using mock data', error);
+  return MOCK_LOCATIONS; // Graceful fallback
+}
+```
+
+### Group-Location Synchronization Pattern
+Groups track member locations via `locationIds` array, synced with backend:
+```typescript
+// After adding location to group
+await addLocationToGroup({ id: locationId, groupId });
+
+// Sync locationIds from backend (Single Source of Truth)
+await updateGroupLocationIds(groupId);
+// → Queries GET /api/v1/locations?groupId={groupId}
+// → Updates group.locationIds = response.data.map(loc => loc.id)
+```
+
+**Why backend sync?**
+- Prevents frontend-backend data inconsistency
+- No manual array manipulation bugs
+- Backend is authoritative for membership
 
 ### Sidebar Category System
 - **Toggleable UI**: Desktop sidebar, mobile overlay with backdrop
@@ -268,12 +318,13 @@ return filteredLocations;
 4. Add routes to `NewApp.tsx`
 5. Use custom hooks for state management
 
-### Switching to Backend API
-When `/api/v1/locations` endpoint is ready:
-1. Open `src/services/locationService.ts`
-2. Comment out mock-first strategy block
-3. Uncomment the TODO API implementation block
-4. Test with backend running
+### Updating OpenAPI Specification
+When backend API changes:
+1. Get updated `openapi.yaml` from backend team
+2. Place in project root (replacing existing)
+3. Run `yarn generate:api` to regenerate clients
+4. Check `src/api/generated/` for new types/endpoints
+5. Update service implementations if needed
 
 ### Service Registration
 ```typescript
