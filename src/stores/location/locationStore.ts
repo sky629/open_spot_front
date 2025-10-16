@@ -6,6 +6,7 @@ import type { LocationState } from './types';
 import type { LocationResponse, GetLocationsParams, CreateLocationRequest, UpdateLocationRequest } from '../../types';
 import type { ILocationService } from '../../core/interfaces';
 import { logger } from '../../utils/logger';
+import { useGroupStore } from '../group';
 
 // 의존성 주입을 위한 서비스 참조
 let locationService: ILocationService | null = null;
@@ -385,7 +386,6 @@ export const useLocationStore = create<LocationState>()(
 
           // 그룹 변경이 있었다면 관련 그룹들 동기화
           if (originalLocation) {
-            const { useGroupStore } = await import('../group/groupStore');
             const { updateGroupLocationIds } = useGroupStore.getState();
 
             const groupsToSync = new Set<string>();
@@ -451,7 +451,6 @@ export const useLocationStore = create<LocationState>()(
 
           // 그룹에 속한 장소였다면 해당 그룹의 locationIds 동기화
           if (location.groupId) {
-            const { useGroupStore } = await import('../group/groupStore');
             const { updateGroupLocationIds } = useGroupStore.getState();
 
             logger.info('Syncing group after location deletion', { groupId: location.groupId });
