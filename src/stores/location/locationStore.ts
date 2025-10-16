@@ -43,6 +43,7 @@ const initialState = {
   currentCategory: null,
   currentGroupId: null,
   currentBounds: null,
+  searchQuery: '',
 };
 
 export const useLocationStore = create<LocationState>()(
@@ -165,6 +166,15 @@ export const useLocationStore = create<LocationState>()(
         if (bounds) {
           logger.debug('Map bounds updated', { bounds });
         }
+      },
+
+      setSearchQuery: (query: string) => {
+        set((state) => ({
+          ...state,
+          searchQuery: query,
+        }));
+
+        logger.debug('Location search query updated', { query });
       },
 
       clearError: () => {

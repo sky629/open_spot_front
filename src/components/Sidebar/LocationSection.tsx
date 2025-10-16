@@ -2,14 +2,14 @@
 
 import React from 'react';
 import styled from 'styled-components';
-import { useLocationFilters, useLocations } from '../../stores/location';
+import { useLocationFilters, useFilteredLocations } from '../../stores/location';
 import { useCategories } from '../../stores/category';
 import { colors } from '../../styles';
 import { LocationList } from './LocationList';
 
 export const LocationSection: React.FC = () => {
   const { currentCategory } = useLocationFilters();
-  const locations = useLocations();
+  const locations = useFilteredLocations();
   const categories = useCategories();
 
   const getCurrentCategoryDisplay = () => {

@@ -19,6 +19,7 @@ export interface LocationState {
     northEast: { lat: number; lng: number };
     southWest: { lat: number; lng: number };
   } | null;
+  searchQuery: string;
 
   // 액션
   setLocations: (locations: LocationResponse[]) => void;
@@ -30,6 +31,7 @@ export interface LocationState {
   setCurrentCategory: (category: string | null) => void;
   setCurrentGroupId: (groupId: string | null) => void;
   setCurrentBounds: (bounds: LocationState['currentBounds']) => void;
+  setSearchQuery: (query: string) => void;
 
   // 비동기 액션
   fetchLocations: (params?: GetLocationsParams) => Promise<void>;

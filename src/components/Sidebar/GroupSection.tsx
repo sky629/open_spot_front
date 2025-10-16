@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { useGroups, useGroupUIState, useGroupStore } from '../../stores/group';
+import { useFilteredGroups, useGroupUIState, useGroupStore } from '../../stores/group';
 import { useLocationStore } from '../../stores/location';
 import { colors, transitions } from '../../styles';
 import { CreateGroupForm } from './CreateGroupForm';
@@ -10,10 +10,11 @@ import { EditGroupModal } from './EditGroupModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 
 export const GroupSection: React.FC = () => {
-  const groups = useGroups();
+  const groups = useFilteredGroups();
   const ui = useGroupUIState();
   const { setUIState, selectedGroupId, selectGroup } = useGroupStore();
   const { setCurrentGroupId, refreshLocations } = useLocationStore();
+  const searchQuery = useGroupStore((state) => state.searchQuery);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -49,7 +50,7 @@ export const GroupSection: React.FC = () => {
   return (
     <Container ref={containerRef}>
       <Header>
-        <Title>내가 생성한 그룹</Title>
+        <Title>장소 보관함</Title>
         <AddButton onClick={handleAddGroup}>
           <PlusIcon>+</PlusIcon>
         </AddButton>
@@ -101,8 +102,17 @@ export const GroupSection: React.FC = () => {
 
         {groups.length === 0 && (
           <EmptyState>
-            <EmptyText>생성된 그룹이 없습니다</EmptyText>
-            <EmptySubText>+ 버튼을 눌러 새 그룹을 만들어보세요</EmptySubText>
+            {searchQuery ? (
+              <>
+                <EmptyText>검색 결과가 없습니다</EmptyText>
+                <EmptySubText>'{searchQuery}'에 해당하는 그룹이 없습니다</EmptySubText>
+              </>
+            ) : (
+              <>
+                <EmptyText>생성된 그룹이 없습니다</EmptyText>
+                <EmptySubText>+ 버튼을 눌러 새 그룹을 만들어보세요</EmptySubText>
+              </>
+            )}
           </EmptyState>
         )}
       </GroupList>

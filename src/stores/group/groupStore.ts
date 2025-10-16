@@ -1,5 +1,6 @@
 // Group Store using Zustand with Backend API Integration
 
+import React from 'react';
 import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
 import { Group, GroupCreateRequest, GroupUpdateRequest, GroupUIState } from '../../types/group';
@@ -25,6 +26,9 @@ interface GroupStore {
   isLoading: boolean;
   error: string | null;
 
+  // Search state
+  searchQuery: string;
+
   // UI state
   ui: GroupUIState;
 
@@ -41,6 +45,9 @@ interface GroupStore {
   // UI actions
   setUIState: (state: Partial<GroupUIState>) => void;
   resetUIState: () => void;
+
+  // Search actions
+  setSearchQuery: (query: string) => void;
 
   // Utility
   getGroupById: (id: string) => Group | undefined;
@@ -60,6 +67,7 @@ const initialState = {
   selectedGroupId: null,
   isLoading: false,
   error: null,
+  searchQuery: '',
   ui: initialUIState,
 };
 
@@ -244,6 +252,12 @@ export const useGroupStore = create<GroupStore>()(
           set({ ui: initialUIState });
         },
 
+        // Search actions
+        setSearchQuery: (query: string) => {
+          set({ searchQuery: query });
+          logger.debug('Group search query updated', { query });
+        },
+
         // Utility functions
         getGroupById: (id: string) => {
           return get().groups.find(group => group.id === id);
@@ -276,6 +290,21 @@ export const useGroupStore = create<GroupStore>()(
 
 // Selectors for easy access
 export const useGroups = () => useGroupStore(state => state.groups);
+
+export const useFilteredGroups = () => {
+  const groups = useGroupStore(state => state.groups);
+  const searchQuery = useGroupStore(state => state.searchQuery);
+
+  return React.useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return groups;
+
+    return groups.filter(group =>
+      group.name?.toLowerCase().includes(query)
+    );
+  }, [groups, searchQuery]);
+};
+
 export const useSelectedGroup = () => {
   const selectedGroupId = useGroupStore(state => state.selectedGroupId);
   const getGroupById = useGroupStore(state => state.getGroupById);

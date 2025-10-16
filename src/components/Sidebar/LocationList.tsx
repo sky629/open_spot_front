@@ -2,15 +2,16 @@
 
 import React from 'react';
 import styled from 'styled-components';
-import { useLocations, useLocationLoading, useLocationError, useLocationFilters } from '../../stores/location';
+import { useFilteredLocations, useLocationLoading, useLocationError, useLocationFilters, useLocationStore } from '../../stores/location';
 import { colors } from '../../styles';
 import { LocationItem } from './LocationItem';
 
 export const LocationList: React.FC = () => {
-  const locations = useLocations();
+  const locations = useFilteredLocations(); // 검색어 필터링된 장소
   const loading = useLocationLoading();
   const error = useLocationError();
   const { currentCategory } = useLocationFilters();
+  const searchQuery = useLocationStore((state) => state.searchQuery);
 
   // Filter locations by current category
   const filteredLocations = React.useMemo(() => {
@@ -46,8 +47,17 @@ export const LocationList: React.FC = () => {
       <Container>
         <EmptyState>
           <EmptyIcon>📍</EmptyIcon>
-          <EmptyText>해당 카테고리에 장소가 없습니다</EmptyText>
-          <EmptySubText>다른 카테고리를 선택해보세요</EmptySubText>
+          {searchQuery ? (
+            <>
+              <EmptyText>검색 결과가 없습니다</EmptyText>
+              <EmptySubText>'{searchQuery}'에 해당하는 장소가 없습니다</EmptySubText>
+            </>
+          ) : (
+            <>
+              <EmptyText>해당 카테고리에 장소가 없습니다</EmptyText>
+              <EmptySubText>다른 카테고리를 선택해보세요</EmptySubText>
+            </>
+          )}
         </EmptyState>
       </Container>
     );

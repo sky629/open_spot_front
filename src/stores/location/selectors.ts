@@ -110,7 +110,7 @@ export const useLocationById = (id: string) =>
   );
 
 /**
- * 위치 검색 셀렉터
+ * 위치 검색 셀렉터 (외부 검색어 사용)
  */
 export const useSearchLocations = (searchTerm: string) =>
   useLocationStore((state) => {
@@ -122,6 +122,25 @@ export const useSearchLocations = (searchTerm: string) =>
       location.description?.toLowerCase().includes(term)
     );
   });
+
+/**
+ * 필터링된 위치 목록 (store의 searchQuery 사용)
+ */
+export const useFilteredLocations = () => {
+  const locations = useLocationStore((state) => state.locations);
+  const searchQuery = useLocationStore((state) => state.searchQuery);
+
+  return React.useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return locations;
+
+    return locations.filter(location =>
+      location.name?.toLowerCase().includes(query) ||
+      location.description?.toLowerCase().includes(query) ||
+      location.address?.toLowerCase().includes(query)
+    );
+  }, [locations, searchQuery]);
+};
 
 /**
  * 지도 관련 상태 셀렉터

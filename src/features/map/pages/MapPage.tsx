@@ -11,6 +11,7 @@ import { LocationSection } from '../../../components/Sidebar/LocationSection';
 import { useUser } from '../../../stores/auth';
 import { useGroupStore } from '../../../stores/group';
 import { useCategoryStore } from '../../../stores/category';
+import { useLocationStore } from '../../../stores/location';
 import { logger } from '../../../utils/logger';
 import { colors, media, transitions, shadows } from '../../../styles';
 import type { LocationResponse } from '../../../types';
@@ -20,12 +21,18 @@ export const MapPage: React.FC = () => {
 
   const navigate = useNavigate();
   const user = useUser();
-  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const mapContainerRef = useRef<MapContainerRef>(null);
+
+  // Store actions
   const fetchGroups = useGroupStore((state) => state.fetchGroups);
+  const setGroupSearchQuery = useGroupStore((state) => state.setSearchQuery);
   const fetchCategories = useCategoryStore((state) => state.fetchCategories);
+  const setLocationSearchQuery = useLocationStore((state) => state.setSearchQuery);
+
+  // Search state from store
+  const locationSearchQuery = useLocationStore((state) => state.searchQuery);
 
   useEffect(() => {
     // 만약 사용자 정보가 없다면 (로그인되지 않은 상태라면)
@@ -69,10 +76,15 @@ export const MapPage: React.FC = () => {
     logger.userAction('Location selected from map', { locationId: location.id });
   };
 
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      logger.userAction('Search performed', { query: searchQuery });
-      // 검색 로직 구현
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+
+    // 장소와 그룹 모두 검색어 업데이트
+    setLocationSearchQuery(query);
+    setGroupSearchQuery(query);
+
+    if (query.trim()) {
+      logger.debug('Search query updated', { query });
     }
   };
 
@@ -153,12 +165,12 @@ export const MapPage: React.FC = () => {
           <SearchContainer>
             <SearchInput
               type="text"
-              placeholder="장소, 주소 검색"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="장소, 그룹 검색"
+              value={locationSearchQuery}
+              onChange={handleSearchChange}
+              onKeyPress={(e) => e.key === 'Enter' && e.preventDefault()}
             />
-            <SearchButton onClick={handleSearch}>
+            <SearchButton onClick={() => logger.userAction('Search clicked', { query: locationSearchQuery })}>
               🔍
             </SearchButton>
           </SearchContainer>
