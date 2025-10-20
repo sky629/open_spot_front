@@ -31,9 +31,9 @@ export class AuthService {
   // Token은 이미 LoginPage에서 store에 저장되었고, getUserProfile()로 user 정보 가져옴
   async setUserFromToken(token: string): Promise<GoogleLoginResponse> {
     try {
-      console.log('🔍 [Hybrid Token] Received access token from backend');
-      console.log('🔑 Token (first 50 chars):', token.substring(0, 50) + '...');
-      console.log('🔑 Token (last 50 chars):', '...' + token.substring(token.length - 50));
+      logger.debug('[Hybrid Token] Received access token from backend');
+      logger.debug('Token (first 50 chars):', token.substring(0, 50) + '...');
+      logger.debug('Token (last 50 chars):', '...' + token.substring(token.length - 50));
 
       // JWT 토큰 파싱해서 내용 확인 (디버깅용)
       try {
@@ -41,12 +41,12 @@ export class AuthService {
         if (parts.length === 3) {
           const header = JSON.parse(atob(parts[0]));
           const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-          console.log('📋 JWT Header:', header);
-          console.log('📋 JWT Payload:', payload);
-          console.log('📋 JWT Expires:', new Date((payload.exp || 0) * 1000).toISOString());
+          logger.debug('JWT Header:', header);
+          logger.debug('JWT Payload:', payload);
+          logger.debug('JWT Expires:', new Date((payload.exp || 0) * 1000).toISOString());
         }
       } catch (e) {
-        console.warn('⚠️ Failed to parse JWT for debugging:', e);
+        logger.warn('Failed to parse JWT for debugging', e);
       }
 
       logger.userAction('Access token received from backend (Hybrid mode)');
@@ -59,11 +59,10 @@ export class AuthService {
         tokens: null
       };
 
-      console.log('✅ Access token validated (user info will be fetched via API)');
+      logger.info('Access token validated (user info will be fetched via API)');
       return loginResponse;
 
     } catch (error) {
-      console.error('❌ Failed to process access token:', error);
       logger.error('Failed to process access token', error);
       throw error;
     }

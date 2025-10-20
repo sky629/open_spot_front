@@ -28,7 +28,7 @@ import { MOCK_LOCATIONS } from './locationService.mockData';
  */
 function transformLocationResponse(apiLocation: any): LocationResponse {
   // 원본 API 응답 로그
-  console.log('🔍 RAW API Location:', {
+  logger.debug('RAW API Location', {
     id: apiLocation.id,
     name: apiLocation.name,
     description: apiLocation.description,
@@ -67,7 +67,7 @@ function transformLocationResponse(apiLocation: any): LocationResponse {
     updatedAt: apiLocation.updatedAt,
   };
 
-  console.log('✅ Transformed location:', {
+  logger.debug('Transformed location', {
     id: transformed.id,
     name: transformed.name,
     description: transformed.description,

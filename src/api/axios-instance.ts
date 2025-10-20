@@ -1,5 +1,6 @@
 import Axios, { AxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../stores/auth';
+import { logger } from '../utils/logger';
 
 const BACKEND_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
@@ -21,20 +22,20 @@ axiosInstance.interceptors.request.use(
     // access_token이 있으면 Authorization 헤더 추가
     if (accessToken) {
       config.headers.Authorization = `Bearer ${accessToken}`;
-      console.log('🔵 [Hybrid Token] API Request with Bearer token:', {
+      logger.debug('[Hybrid Token] API Request with Bearer token', {
         url: config.url,
         method: config.method,
         tokenPreview: accessToken.substring(0, 30) + '...' + accessToken.substring(accessToken.length - 30),
         authHeader: config.headers.Authorization.substring(0, 50) + '...',
       });
     } else {
-      console.log('🔵 API Request (no token):', {
+      logger.debug('API Request (no token)', {
         url: config.url,
         method: config.method,
       });
     }
 
-    console.log('🔵 Request Headers:', {
+    logger.debug('Request Headers', {
       ...config.headers,
       Authorization: config.headers.Authorization ? '[PRESENT]' : '[MISSING]',
     });
@@ -42,7 +43,7 @@ axiosInstance.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('🔴 Request Interceptor Error:', error);
+    logger.error('Request Interceptor Error', error);
     return Promise.reject(error);
   }
 );
@@ -69,7 +70,7 @@ const processQueue = (error: unknown = null) => {
 // Response Interceptor: 자동 Token Refresh
 axiosInstance.interceptors.response.use(
   (response) => {
-    console.log('🟢 API Response:', {
+    logger.debug('API Response', {
       url: response.config.url,
       status: response.status,
       headers: response.headers,
@@ -80,7 +81,7 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    console.error('🔴 API Error:', {
+    logger.error('API Error', {
       url: error.config?.url,
       status: error.response?.status,
       statusText: error.response?.statusText,
@@ -92,7 +93,7 @@ axiosInstance.interceptors.response.use(
 
     // 401 상세 분석
     if (error.response?.status === 401) {
-      console.error('🔴 [401 Unauthorized] Details:', {
+      logger.error('[401 Unauthorized] Details', {
         url: error.config?.url,
         method: error.config?.method,
         sentAuthHeader: error.config?.headers?.Authorization ? 'YES' : 'NO',
@@ -108,7 +109,7 @@ axiosInstance.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       // Refresh API 자체가 401이면 로그아웃 (무한 루프 방지)
       if (originalRequest.url?.includes('/auth/token/refresh')) {
-        console.error('🔴 Refresh token expired, logging out...');
+        logger.error('Refresh token expired, logging out');
         isRefreshing = false;
         processQueue(error);
         // 로그아웃 처리 (AuthContext에서 처리하도록 에러 전파)
@@ -133,7 +134,7 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        console.log('🔄 Access token expired, refreshing...');
+        logger.info('Access token expired, refreshing...');
 
         // Refresh API 호출 (refresh_token HttpOnly Cookie 자동 전송)
         const response = await axiosInstance.post<{ accessToken: string }>('/api/v1/auth/token/refresh');
@@ -141,7 +142,7 @@ axiosInstance.interceptors.response.use(
         // Response body에서 새 accessToken 추출하여 store에 저장 (camelCase)
         if (response.data && response.data.accessToken) {
           useAuthStore.getState().setAccessToken(response.data.accessToken);
-          console.log('✅ Token refreshed and stored successfully');
+          logger.info('Token refreshed and stored successfully');
         }
 
         // 대기 중인 요청들 처리
@@ -150,7 +151,7 @@ axiosInstance.interceptors.response.use(
         // 원래 요청 재시도 (새 access_token이 store에 있음)
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        console.error('🔴 Token refresh failed:', refreshError);
+        logger.error('Token refresh failed', refreshError);
 
         // Refresh 실패 시 대기 중인 요청들도 실패 처리
         processQueue(refreshError);

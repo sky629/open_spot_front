@@ -18,8 +18,30 @@ class Logger {
   private config: LoggerConfig;
 
   constructor() {
+    // 환경변수로 로그 레벨 제어
+    const logLevelEnv = import.meta.env.VITE_LOG_LEVEL?.toUpperCase();
+    const defaultLevel = import.meta.env.PROD ? LogLevel.ERROR : LogLevel.DEBUG;
+
+    let level: LogLevel;
+    switch (logLevelEnv) {
+      case 'DEBUG':
+        level = LogLevel.DEBUG;
+        break;
+      case 'INFO':
+        level = LogLevel.INFO;
+        break;
+      case 'WARN':
+        level = LogLevel.WARN;
+        break;
+      case 'ERROR':
+        level = LogLevel.ERROR;
+        break;
+      default:
+        level = defaultLevel;
+    }
+
     this.config = {
-      level: LogLevel.ERROR, // 오류만 표시하도록 변경
+      level,
       enableColors: import.meta.env.DEV,
       enableTimestamp: true,
       enableSource: import.meta.env.DEV,
@@ -82,6 +104,7 @@ class Logger {
 
   debug(message: string, ...args: unknown[]): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return;
+    if (import.meta.env.PROD && this.config.level > LogLevel.DEBUG) return;
 
     const source = this.config.enableSource ? this.getStackTrace() : undefined;
     const formatted = this.formatMessage(LogLevel.DEBUG, message, source);
@@ -91,6 +114,7 @@ class Logger {
 
   info(message: string, ...args: unknown[]): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
+    if (import.meta.env.PROD && this.config.level > LogLevel.INFO) return;
 
     const source = this.config.enableSource ? this.getStackTrace() : undefined;
     const formatted = this.formatMessage(LogLevel.INFO, message, source);
@@ -100,6 +124,7 @@ class Logger {
 
   warn(message: string, ...args: unknown[]): void {
     if (!this.shouldLog(LogLevel.WARN)) return;
+    if (import.meta.env.PROD && this.config.level > LogLevel.WARN) return;
 
     const source = this.config.enableSource ? this.getStackTrace() : undefined;
     const formatted = this.formatMessage(LogLevel.WARN, message, source);

@@ -18,10 +18,13 @@ export default defineConfig(({ mode }) => {
       host: true,
     },
     build: {
-      // 프로덕션 빌드 시 console.log, debugger 제거
+      // 프로덕션 빌드 시 최적화
       minify: 'esbuild',
       esbuild: {
-        drop: mode === 'production' ? ['console', 'debugger'] : [],
+        // debugger만 제거 (console은 logger 시스템이 제어)
+        drop: mode === 'production' ? ['debugger'] : [],
+        // 순수 함수 호출 제거 (사용되지 않는 logger 호출 등)
+        pure: mode === 'production' ? ['console.log', 'console.info', 'console.debug'] : [],
       },
     },
     define: {

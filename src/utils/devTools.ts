@@ -216,8 +216,8 @@ class DevTools {
   // React DevTools 설치 체크
   checkReactDevTools(): void {
     if (typeof window !== 'undefined') {
-      const hasReactDevTools = !!(window as typeof window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__REACT_DEVTOOLS_GLOBAL_HOOK__;
       // DevTools 존재 여부만 체크 (로그 없이)
+      void (window as typeof window & { __REACT_DEVTOOLS_GLOBAL_HOOK__?: unknown }).__REACT_DEVTOOLS_GLOBAL_HOOK__;
       return;
     }
   }

@@ -288,7 +288,7 @@ export const useAuthStore = create<AuthState>()(
           const { isServiceReady } = get();
 
           if (!isServiceReady || !authService) {
-            console.warn('AuthService not available for logout');
+            logger.warn('AuthService not available for logout');
             // 로그아웃은 서비스가 없어도 로컬 상태만 정리
           }
 
@@ -360,7 +360,7 @@ export const useAuthStore = create<AuthState>()(
         }),
         onRehydrateStorage: () => (state) => {
           if (state) {
-            console.log('🔄 Auth store rehydrated from localStorage', {
+            logger.debug('Auth store rehydrated from localStorage', {
               hasToken: !!state.accessToken,
               hasUser: !!state.user,
             });

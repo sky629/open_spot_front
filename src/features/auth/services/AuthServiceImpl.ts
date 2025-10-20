@@ -5,6 +5,7 @@ import { AuthService } from './authService';
 import type { IAuthServiceFull } from '../../../core/interfaces';
 import type { User } from '../../../types';
 import { useAuthStore } from '../../../stores/auth';
+import { logger } from '../../../utils/logger';
 
 /**
  * Auth Feature용 서비스 구현체
@@ -52,11 +53,11 @@ export class AuthServiceImpl implements IAuthServiceFull {
         try {
           const updatedUser = await this.authService.getUserProfile();
           this.setUser(updatedUser);
-          console.log('✅ Auto login successful - cookie valid');
+          logger.info('Auto login successful - cookie valid');
           return true;
         } catch (error) {
           // 쿠키 만료/무효 - user 제거
-          console.warn('Cookie expired or invalid, clearing user');
+          logger.warn('Cookie expired or invalid, clearing user');
           this.setUser(null);
           return false;
         }
@@ -64,12 +65,12 @@ export class AuthServiceImpl implements IAuthServiceFull {
 
       // React Strict Mode에서 중복 로그 방지
       if (!this._hasLoggedNoUserData) {
-        console.log('ℹ️ No saved user data found');
+        logger.info('No saved user data found');
         this._hasLoggedNoUserData = true;
       }
       return false;
     } catch (error) {
-      console.warn('Auto login failed:', error);
+      logger.warn('Auto login failed', error);
       return false;
     }
   }
