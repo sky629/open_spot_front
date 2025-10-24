@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
       __VITE_NAVER_MAP_CLIENT_ID__: JSON.stringify(env.VITE_NAVER_MAP_CLIENT_ID || ''),
       __VITE_API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:8080'),
       __VITE_GOOGLE_CLIENT_ID__: JSON.stringify(env.VITE_GOOGLE_CLIENT_ID || ''),
+      __VITE_GOOGLE_OAUTH_URL__: JSON.stringify(env.VITE_GOOGLE_OAUTH_URL || 'http://localhost:8080/oauth2/authorization/google'),
     },
   }
 })

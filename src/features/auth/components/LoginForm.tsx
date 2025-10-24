@@ -33,10 +33,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       logger.userAction('Google login initiated');
 
       // Google OAuth 리다이렉트 URI (향후 Kakao, Apple 등 추가 대비)
-      const googleRedirectUri = `${window.location.origin}/login`;
-      const googleOAuthUrl = `${__VITE_API_BASE_URL__}/api/v1/auth/google/login?redirect_uri=${encodeURIComponent(googleRedirectUri)}`;
+      const googleOAuthUrl = __VITE_GOOGLE_OAUTH_URL__;
 
-      logger.info('Redirecting to Google OAuth', { url: googleOAuthUrl, redirectUri: googleRedirectUri });
+      logger.info('Redirecting to Google OAuth directly', { url: googleOAuthUrl });
       window.location.href = googleOAuthUrl;
 
       // 리다이렉트 후에는 이 코드가 실행되지 않음
