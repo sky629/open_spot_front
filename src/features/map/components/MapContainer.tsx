@@ -64,11 +64,6 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
 
   } | undefined>(undefined);
 
-  // 모바일 롱프레스 감지를 위한 상태
-  const [touchStartTime, setTouchStartTime] = useState<number>(0);
-
-  const [touchStartPos, setTouchStartPos] = useState<{x: number, y: number} | null>(null);
-
   const lastBoundsRef = useRef<{ne: {lat: number, lng: number}, sw: {lat: number, lng: number}} | null>(null);
 
 
@@ -477,40 +472,85 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
 
 
 
-  // 모바일 롱프레스 핸들러
+  // 모바일 롱프레스 핸들러 - Ref 사용으로 클로저 문제 해결
+  const touchStartTimeRef = useRef<number>(0);
+  const touchStartPosRef = useRef<{x: number, y: number} | null>(null);
+
   const handleTouchStart = useCallback((e: any) => {
-    const coord = e.coord;
-    if (coord && typeof coord.x === 'function' && typeof coord.y === 'function') {
-      setTouchStartTime(Date.now());
-      setTouchStartPos({ x: coord.x(), y: coord.y() });
+    try {
+      if (!e || !e.coord) return;
+
+      touchStartTimeRef.current = Date.now();
+
+      // Naver Maps 좌표 객체에서 픽셀 좌표 추출
+      if (typeof e.coord.x === 'function' && typeof e.coord.y === 'function') {
+        touchStartPosRef.current = { x: e.coord.x(), y: e.coord.y() };
+      }
+    } catch (error) {
+      logger.error('Touch start error:', error);
     }
   }, []);
 
   const handleTouchEnd = useCallback((e: any) => {
-    const touchDuration = Date.now() - touchStartTime;
-    const LONG_PRESS_DURATION = 500; // 500ms 이상 누르기
+    try {
+      if (!e || !e.coord) return;
 
-    if (touchDuration >= LONG_PRESS_DURATION && touchStartPos) {
-      const coord = e.coord;
-      if (coord && typeof coord.x === 'function' && typeof coord.y === 'function') {
-        const deltaX = Math.abs(coord.x() - touchStartPos.x);
-        const deltaY = Math.abs(coord.y() - touchStartPos.y);
+      const touchDuration = Date.now() - touchStartTimeRef.current;
+      const LONG_PRESS_DURATION = 500; // 500ms 이상 누르기
 
-        // 이동이 10px 미만이면 롱프레스로 인식
-        if (deltaX < 10 && deltaY < 10) {
-          const lat = e.coord.lat();
-          const lng = e.coord.lng();
+      logger.info('Touch end detected', {
+        duration: touchDuration,
+        hasStartPos: !!touchStartPosRef.current,
+        coord: e.coord
+      });
 
-          logger.info('Map long-pressed (mobile)', { lat, lng, duration: touchDuration });
-          setClickedPosition({ lat, lng });
-          setIsModalOpen(true);
+      if (touchDuration >= LONG_PRESS_DURATION && touchStartPosRef.current) {
+        // 현재 좌표 가져오기
+        let currentX = 0;
+        let currentY = 0;
+
+        if (typeof e.coord.x === 'function' && typeof e.coord.y === 'function') {
+          currentX = e.coord.x();
+          currentY = e.coord.y();
+        }
+
+        const startPos = touchStartPosRef.current;
+        const deltaX = Math.abs(currentX - startPos.x);
+        const deltaY = Math.abs(currentY - startPos.y);
+
+        logger.info('Long-press check', { deltaX, deltaY, threshold: 20 });
+
+        // 이동이 20px 미만이면 롱프레스로 인식 (오차 범위 확대)
+        if (deltaX < 20 && deltaY < 20) {
+          try {
+            const lat = e.coord.lat();
+            const lng = e.coord.lng();
+
+            if (typeof lat === 'function' && typeof lng === 'function') {
+              const latVal = lat();
+              const lngVal = lng();
+
+              logger.info('Map long-pressed (mobile)', { lat: latVal, lng: lngVal, duration: touchDuration });
+              setClickedPosition({ lat: latVal, lng: lngVal });
+              setIsModalOpen(true);
+            } else if (typeof lat === 'number' && typeof lng === 'number') {
+              logger.info('Map long-pressed (mobile)', { lat, lng, duration: touchDuration });
+              setClickedPosition({ lat, lng });
+              setIsModalOpen(true);
+            }
+          } catch (error) {
+            logger.error('Error getting lat/lng:', error);
+          }
         }
       }
-    }
 
-    setTouchStartTime(0);
-    setTouchStartPos(null);
-  }, [touchStartTime, touchStartPos]);
+      // 초기화
+      touchStartTimeRef.current = 0;
+      touchStartPosRef.current = null;
+    } catch (error) {
+      logger.error('Touch end error:', error);
+    }
+  }, []);
 
 
 

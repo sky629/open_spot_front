@@ -1,10 +1,11 @@
 // User Profile Component
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
 import { useUser, useAuthStore } from '../../../stores/auth';
 import { logger } from '../../../utils/logger';
 import { useNavigate } from 'react-router-dom';
+import { media } from '../../../styles';
 
 interface UserProfileProps {
   onLogout?: () => void;
@@ -17,6 +18,9 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
   const authStore = useAuthStore();
   const logout = authStore.logout;
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const handleLogout = async () => {
     try {
       setIsLoggingOut(true);
@@ -34,6 +38,20 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
     }
   };
 
+  // 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isDropdownOpen]);
+
   if (!user) {
     return (
       <Container className={className}>
@@ -43,8 +61,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
   }
 
   return (
-    <Container className={className}>
-      <ProfileHeader>
+    <Container className={className} ref={dropdownRef}>
+      <ProfileHeader onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
         <ProfileImage>
           {user.profileImageUrl ? (
             <img src={user.profileImageUrl} alt={user.name} />
@@ -61,18 +79,42 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
         </UserInfo>
 
         <LogoutButton
-          onClick={handleLogout}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleLogout();
+          }}
           disabled={isLoggingOut}
           title={isLoggingOut ? '로그아웃 중...' : '로그아웃'}
         >
           {isLoggingOut ? '⏳' : '🚪'}
         </LogoutButton>
       </ProfileHeader>
+
+      {isDropdownOpen && (
+        <DropdownMenu>
+          <DropdownHeader>
+            <DropdownUserName>{user.name || '사용자'}</DropdownUserName>
+            <DropdownUserEmail>{user.email || 'user@example.com'}</DropdownUserEmail>
+          </DropdownHeader>
+          <DropdownDivider />
+          <DropdownLogoutButton
+            onClick={(e) => {
+              e.stopPropagation();
+              handleLogout();
+              setIsDropdownOpen(false);
+            }}
+            disabled={isLoggingOut}
+          >
+            🚪 로그아웃
+          </DropdownLogoutButton>
+        </DropdownMenu>
+      )}
     </Container>
   );
 };
 
 const Container = styled.div`
+  position: relative;
   display: flex;
   flex-direction: column;
 `;
@@ -81,6 +123,11 @@ const ProfileHeader = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  cursor: pointer;
+
+  ${media.mobile} {
+    gap: 0.5rem;
+  }
 `;
 
 const ProfileImage = styled.div`
@@ -114,6 +161,10 @@ const DefaultAvatar = styled.div`
 const UserInfo = styled.div`
   flex: 1;
   min-width: 0;
+
+  ${media.mobile} {
+    display: none;
+  }
 `;
 
 const UserName = styled.h3`
@@ -162,6 +213,66 @@ const LogoutButton = styled.button`
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
+  }
+`;
+
+const DropdownMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 200px;
+  margin-top: 0.5rem;
+  z-index: 100;
+  overflow: hidden;
+`;
+
+const DropdownHeader = styled.div`
+  padding: 0.75rem 1rem;
+  background: #f5f5f5;
+`;
+
+const DropdownUserName = styled.div`
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+`;
+
+const DropdownUserEmail = styled.div`
+  font-size: 0.75rem;
+  color: #666;
+  margin: 0.25rem 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+const DropdownDivider = styled.div`
+  height: 1px;
+  background: #e0e0e0;
+`;
+
+const DropdownLogoutButton = styled.button`
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: transparent;
+  color: #333;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: #f5f5f5;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
   }
 `;
 

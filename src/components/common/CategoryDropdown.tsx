@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import { useLocationFilters, useLocationActions, useLocationCounts } from '../../stores/location';
 import { useCategories } from '../../stores/category';
 import { CATEGORY_ICONS } from '../../constants/map';
-import { colors, transitions } from '../../styles';
+import { colors, transitions, media } from '../../styles';
 
 export const CategoryDropdown: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -134,6 +134,11 @@ const Container = styled.div`
   position: relative;
   display: inline-block;
   min-width: 180px;
+
+  ${media.mobile} {
+    min-width: auto;
+    max-width: 60px;
+  }
 `;
 
 const DropdownButton = styled.button<{ $isOpen: boolean }>`
@@ -180,11 +185,19 @@ const CategoryIcon = styled.span`
 const CategoryName = styled.span`
   font-weight: 500;
   color: ${colors.text.primary};
+
+  ${media.mobile} {
+    display: none;
+  }
 `;
 
 const CategoryCount = styled.span`
   color: ${colors.text.secondary};
   font-size: 0.8125rem;
+
+  ${media.mobile} {
+    font-size: 0.75rem;
+  }
 `;
 
 const ArrowIcon = styled.span<{ $isOpen: boolean }>`

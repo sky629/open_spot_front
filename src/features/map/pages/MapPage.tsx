@@ -273,6 +273,10 @@ const NavRight = styled.div`
   display: flex;
   align-items: center;
   gap: 16px;
+
+  ${media.mobile} {
+    gap: 8px;
+  }
 `;
 
 const MainLayout = styled.div`
