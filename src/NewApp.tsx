@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary, LoadingSpinner } from './shared/components';
-import { LoginPage, LoginErrorPage, ProtectedRoute } from './features/auth';
+import { LoginPage, LoginErrorPage, ProtectedRoute, OAuthCallbackHandler } from './features/auth';
 import { MapPage } from './features/map';
 import { AuthProvider } from './contexts/AuthContext';
 import { initializeApplication, cleanupApplication } from './setup';
@@ -146,10 +146,12 @@ export const NewApp: React.FC = () => {
         <Router>
           <div className="App">
             <Routes>
+              {/* OAuth 콜백 처리 경로 - 루트 경로에서 token 파라미터 처리 */}
+              <Route path="/" element={<OAuthCallbackHandler />} />
+
               {/* 공개 경로들 */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/login/error" element={<LoginErrorPage />} />
-
 
               {/* 보호된 경로들 */}
               <Route
@@ -160,9 +162,6 @@ export const NewApp: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
-
-              {/* 기본 경로 */}
-              <Route path="/" element={<Navigate to="/map" replace />} />
 
               {/* 404 처리 */}
               <Route path="*" element={<Navigate to="/login" replace />} />
