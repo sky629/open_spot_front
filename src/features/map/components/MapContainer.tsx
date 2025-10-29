@@ -64,6 +64,11 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
 
   } | undefined>(undefined);
 
+  // 모바일 롱프레스 감지를 위한 상태
+  const [touchStartTime, setTouchStartTime] = useState<number>(0);
+
+  const [touchStartPos, setTouchStartPos] = useState<{x: number, y: number} | null>(null);
+
   const lastBoundsRef = useRef<{ne: {lat: number, lng: number}, sw: {lat: number, lng: number}} | null>(null);
 
 
@@ -472,6 +477,43 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
 
 
 
+  // 모바일 롱프레스 핸들러
+  const handleTouchStart = useCallback((e: any) => {
+    const coord = e.coord;
+    if (coord && typeof coord.x === 'function' && typeof coord.y === 'function') {
+      setTouchStartTime(Date.now());
+      setTouchStartPos({ x: coord.x(), y: coord.y() });
+    }
+  }, []);
+
+  const handleTouchEnd = useCallback((e: any) => {
+    const touchDuration = Date.now() - touchStartTime;
+    const LONG_PRESS_DURATION = 500; // 500ms 이상 누르기
+
+    if (touchDuration >= LONG_PRESS_DURATION && touchStartPos) {
+      const coord = e.coord;
+      if (coord && typeof coord.x === 'function' && typeof coord.y === 'function') {
+        const deltaX = Math.abs(coord.x() - touchStartPos.x);
+        const deltaY = Math.abs(coord.y() - touchStartPos.y);
+
+        // 이동이 10px 미만이면 롱프레스로 인식
+        if (deltaX < 10 && deltaY < 10) {
+          const lat = e.coord.lat();
+          const lng = e.coord.lng();
+
+          logger.info('Map long-pressed (mobile)', { lat, lng, duration: touchDuration });
+          setClickedPosition({ lat, lng });
+          setIsModalOpen(true);
+        }
+      }
+    }
+
+    setTouchStartTime(0);
+    setTouchStartPos(null);
+  }, [touchStartTime, touchStartPos]);
+
+
+
   // 우클릭 이벤트 등록
 
   useEffect(() => {
@@ -491,6 +533,21 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
     };
 
   }, [map, isLoaded, handleRightClick]);
+
+
+
+  // 모바일 롱프레스 이벤트 등록
+  useEffect(() => {
+    if (!map || !isLoaded) return;
+
+    const touchStartListener = window.naver.maps.Event.addListener(map, 'touchstart', handleTouchStart);
+    const touchEndListener = window.naver.maps.Event.addListener(map, 'touchend', handleTouchEnd);
+
+    return () => {
+      window.naver.maps.Event.removeListener(touchStartListener);
+      window.naver.maps.Event.removeListener(touchEndListener);
+    };
+  }, [map, isLoaded, handleTouchStart, handleTouchEnd]);
 
 
 
