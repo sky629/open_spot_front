@@ -232,7 +232,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
       }
       marker.setMap(null);
     };
-  }, [map, location.id, location.latitude, location.longitude, location.category]);
+  }, [map, location.id, location.latitude, location.longitude, location.category, location.groupId]);
 
   // 위치 업데이트
   useEffect(() => {
@@ -245,8 +245,9 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
   // 이 컴포넌트는 실제로 렌더링되지 않음 (마커는 지도에 직접 추가됨)
   return null;
 }, (prevProps, nextProps) => {
-  // location.id가 같으면 리렌더링 방지
+  // location.id, groupId가 같고 map이 같으면 리렌더링 방지
   return prevProps.location.id === nextProps.location.id &&
+         prevProps.location.groupId === nextProps.location.groupId &&
          prevProps.map === nextProps.map;
 });
 
