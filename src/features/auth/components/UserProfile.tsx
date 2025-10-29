@@ -77,17 +77,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onLogout, className })
           <UserName>{user.name || '사용자'}</UserName>
           <UserEmail>{user.email || 'user@example.com'}</UserEmail>
         </UserInfo>
-
-        <LogoutButton
-          onClick={(e) => {
-            e.stopPropagation();
-            handleLogout();
-          }}
-          disabled={isLoggingOut}
-          title={isLoggingOut ? '로그아웃 중...' : '로그아웃'}
-        >
-          {isLoggingOut ? '⏳' : '🚪'}
-        </LogoutButton>
       </ProfileHeader>
 
       {isDropdownOpen && (
@@ -186,34 +175,6 @@ const UserEmail = styled.p`
   overflow: hidden;
   text-overflow: ellipsis;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-`;
-
-const LogoutButton = styled.button`
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.875rem;
-  backdrop-filter: blur(10px);
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
-  }
 `;
 
 const DropdownMenu = styled.div`
