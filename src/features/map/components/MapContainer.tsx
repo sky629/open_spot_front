@@ -480,6 +480,12 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
     try {
       if (!e || !e.coord) return;
 
+      // 네이버 지도 기본 동작 방지
+      if (e.domEvent) {
+        e.domEvent.preventDefault();
+        e.domEvent.stopPropagation();
+      }
+
       touchStartTimeRef.current = Date.now();
 
       // Naver Maps 좌표 객체에서 픽셀 좌표 추출
@@ -494,6 +500,12 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
   const handleTouchEnd = useCallback((e: any) => {
     try {
       if (!e || !e.coord) return;
+
+      // 네이버 지도 기본 동작 방지 (파란 핀 생성 차단)
+      if (e.domEvent) {
+        e.domEvent.preventDefault();
+        e.domEvent.stopPropagation();
+      }
 
       const touchDuration = Date.now() - touchStartTimeRef.current;
       const LONG_PRESS_DURATION = 500; // 500ms 이상 누르기

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-React TypeScript frontend application with feature-based architecture, displaying categorized location data on Naver Maps. Features a toggleable sidebar with category filtering, Google OAuth authentication, dependency injection, and Zustand state management with mock-first development strategy.
+React TypeScript frontend application with feature-based architecture, displaying categorized location data on Naver Maps. Features a toggleable sidebar with category filtering, Google OAuth authentication, dependency injection, and Zustand state management. The application uses Orval for auto-generating type-safe API clients from OpenAPI specifications, enabling rapid feature development without manual API client boilerplate.
 
 ## Key Technologies
 
@@ -42,6 +42,9 @@ yarn kill:servers
 
 # Restart development server (kill + start)
 yarn restart
+
+# Watch and type-check during development
+yarn type-check  # Run in separate terminal while developing
 ```
 
 ### Build Commands
@@ -201,11 +204,15 @@ The application uses a custom DI container (`src/core/container/Container.ts`):
 
 ### Authentication Flow
 
-1. **Login**: Google OAuth redirect → Backend exchange → JWT tokens
-2. **Token Storage**: Secure cookie handling via `SecureCookieService`
-3. **API Calls**: JWT attached via `SecureApiClient` interceptors
+1. **Login**: Google OAuth redirect → Backend OAuth2 exchange → HttpOnly Cookies
+2. **Token Storage**: **HttpOnly Cookies** (secure, HTTP-only flag) handled by backend
+3. **API Calls**: Cookies automatically attached to all requests (no manual header insertion needed)
 4. **Protected Routes**: `ProtectedRoute` component guards authenticated pages
-5. **Token Refresh**: Automatic refresh before expiration
+5. **Token Refresh**: Backend automatically refreshes tokens via `Set-Cookie` header on each API response
+   - No manual token refresh logic needed on frontend
+   - Backend manages refresh token lifecycle
+
+**Key Point**: This is a **Hybrid Token approach** using HttpOnly Cookies. The backend handles all token management, making the frontend stateless regarding token handling.
 
 ### Application Lifecycle
 
@@ -213,64 +220,122 @@ Entry point: `src/main.tsx` → `NewApp.tsx`
 
 1. **Service Registration**: `registerServices()` sets up DI container with all services
 2. **Store Configuration**: `configureStores()` injects services into Zustand stores
-3. **Auto-Authentication**: Attempts automatic login from stored credentials
-4. **Token Management**: Sets up automatic token refresh intervals
-5. **Route Protection**: Authentication checked for protected routes
+3. **Auto-Authentication**: Attempts automatic login using existing HttpOnly cookies
+4. **Token Management**: Backend handles all token refresh (no frontend setup needed)
+5. **Route Protection**: Authentication checked for protected routes via cookie validity
 
 ### Service Registration Process
 
-```typescript
-// In src/setup/serviceRegistration.ts
-export const initializeApplication = async (): Promise<void> => {
-  // 1. Register all services in DI container
-  registerServices();
+The `src/setup/serviceRegistration.ts` file handles all service registration and configuration:
 
-  // 2. Configure stores with injected services
+```typescript
+export const registerServices = (): void => {
+  // Register services as singletons in DI container
+  container.register(SERVICE_TOKENS.COOKIE_SERVICE, () => new SecureCookieService(), true);
+  container.register(SERVICE_TOKENS.AUTH_SERVICE, () => new AuthServiceImpl(), true);
+  container.register(SERVICE_TOKENS.LOCATION_SERVICE, () => new LocationService(), true);
+  container.register(SERVICE_TOKENS.GROUP_SERVICE, () => new GroupService(), true);
+  container.register(SERVICE_TOKENS.CATEGORY_SERVICE, () => new CategoryService(), true);
+  // ... etc
+};
+
+export const configureStores = (): void => {
+  // Inject resolved services into Zustand stores
+  const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE);
+  setupStores({ authService, locationService, groupService, categoryService });
+};
+
+export const initializeApplication = async (): Promise<void> => {
+  registerServices();
   configureStores();
 
-  // 3. Attempt auto-login from stored credentials
+  // Attempt auto-login from existing HttpOnly cookies
   const authService = container.resolve(SERVICE_TOKENS.AUTH_SERVICE);
   await authService.attemptAutoLogin();
-
-  // 4. Setup automatic token refresh
-  authService.setupAutoTokenRefresh();
 };
 ```
 
+**Important**: All services are singletons. Registration includes prevention of duplicate registration via `isServiceRegistered` flag.
+
 ## Key Service Patterns
 
-### API Client Generation with Orval
+### API Client Generation with Orval (Recent Migration)
 The application uses **Orval** to auto-generate TypeScript API clients from `openapi.yaml`:
 - **Source**: `openapi.yaml` in project root defines all backend endpoints
+- **Configuration**: `orval.config.ts` specifies Axios as the HTTP client and enables automatic code generation
 - **Generation**: `yarn generate:api` creates type-safe clients in `src/api/generated/`
-- **Integration**: Services wrap generated clients for additional logic
-- **Benefits**: Type safety, automatic updates when backend changes, reduced boilerplate
+- **Integration**: Services use generated clients directly (wrapped Orval clients from `src/api/axios-instance.ts`)
+- **Benefits**:
+  - Type safety for all API requests/responses
+  - Automatic updates when backend OpenAPI spec changes
+  - Reduced manual boilerplate
+  - Automatic prettier formatting after generation
 
-Example workflow:
-```bash
-# 1. Backend team updates openapi.yaml
-# 2. Run generation command
-yarn generate:api
+**Workflow**:
+1. Backend team updates `openapi.yaml` with new endpoints/schemas
+2. Run `yarn generate:api` (regenerates all clients in `src/api/generated/`)
+3. TypeScript types and API functions automatically available
+4. Service implementations use generated clients directly
 
-# 3. Generated clients available immediately
-import { getLocations } from 'src/api/generated/locations/locations';
+**Example**:
+```typescript
+// In locationService.ts
+import { getLocations as getLocationsApi } from 'src/api/generated/locations/locations';
+
+// Use generated type-safe function
+const response = await getLocationsApi({
+  groupId: '123',  // TypeScript auto-completes available params
+  page: 0,
+  size: 20
+});
+
+// Response is fully typed as LocationPageResponse
+const locations = response.data?.content || [];
 ```
+
+**Note**: Generated files should never be manually edited. They're auto-generated from the OpenAPI spec.
 
 ### Backend API Integration Pattern
-All services use backend APIs with fallback to mock data:
+All services use Orval-generated API clients with graceful fallback to mock data:
+
 ```typescript
-// locationService.ts pattern
-try {
-  const response = await locationsApi.getLocations(params);
-  if (response.success && response.data) {
-    const data = response.data.content || []; // Handle pagination
-    return data.map(transformLocationResponse);
+// In src/services/locationService.ts (using Orval)
+import { getLocations as getLocationsApi } from 'src/api/generated/locations/locations';
+
+export async function fetchLocations(params: ILocationParams): Promise<LocationResponse[]> {
+  try {
+    // Call Orval-generated function (fully typed)
+    const response = await getLocationsApi({
+      northEastLat: params.bounds?.northEast.lat,
+      northEastLon: params.bounds?.northEast.lng,
+      southWestLat: params.bounds?.southWest.lat,
+      southWestLon: params.bounds?.southWest.lng,
+      categoryId: params.category,
+      groupId: params.groupId,
+      page: params.page,
+      size: params.pageSize,
+    });
+
+    if (response.success && response.data) {
+      // Backend returns { content: Location[], page: PageInfo }
+      const data = response.data.content || [];
+      return data.map(transformLocationResponse);
+    }
+  } catch (error) {
+    logger.error('API error, using mock data', error);
   }
-} catch (error) {
-  logger.error('API error, using mock data', error);
-  return MOCK_LOCATIONS; // Graceful fallback
+
+  // Graceful fallback to mock data
+  return MOCK_LOCATIONS;
 }
 ```
+
+**Key Points**:
+- Orval generates all API functions in `src/api/generated/`
+- Generated types are fully TypeScript-strict
+- Backend response shape: `{ success: boolean, data: T, error: null }`
+- Pagination handled via `.data.content` (destructure pagination data from `.data.page`)
+- All services gracefully fall back to mock data on API failure
 
 ### Group-Location Synchronization Pattern
 Groups track member locations via `locationIds` array, synced with backend:
@@ -323,45 +388,70 @@ await updateGroupLocationIds(groupId);
 
 ## Development Patterns
 
+### Adding New API Endpoints (with Orval)
+When backend adds new endpoints:
+1. **Backend team updates** `openapi.yaml` (or you receive the updated spec)
+2. **Place spec** in project root: `./openapi.yaml`
+3. **Regenerate clients**: `yarn generate:api`
+4. **Check generated files** in `src/api/generated/` for new functions/types
+5. **Use in services**: Import and call generated functions in service implementations
+6. **Type-safety**: No manual types needed—Orval creates them automatically
+
+**No manual API client writing needed!**
+
 ### Adding New Location Categories
 1. Update `MAP_CATEGORIES` in `src/constants/map.ts`
 2. Add corresponding `MARKER_ICONS` entry
-3. Update mock data in `locationService.ts` with new category
-4. Add category label in `MapPage.tsx` categories array
+3. Update mock data in `src/services/locationService.mockData.ts` with new category
+4. Category filter in `CategoryFilter.tsx` auto-includes all categories from `MAP_CATEGORIES`
 
 ### Adding New Features
-1. Create components under appropriate `src/components/` subdirectory
-2. Implement service interfaces from `src/core/interfaces/`
-3. Register services in DI container if needed
-4. Add routes to `NewApp.tsx`
-5. Use custom hooks for state management
+1. **Feature structure**: Create `src/features/featureName/` with `components/`, `pages/`, `services/` subdirectories
+2. **Service interface**: Define interface in `src/core/interfaces/IFeatureService.ts`
+3. **Service implementation**: Create service in `src/services/featureService.ts`
+4. **DI registration**: Add to `src/setup/serviceRegistration.ts` with service token in `SERVICE_TOKENS`
+5. **Store creation**: Create Zustand store in `src/stores/featureName/`
+6. **Store injection**: Configure in `setupStores()` function
+7. **Add routes**: Register in `NewApp.tsx` routing configuration
 
 ### Updating OpenAPI Specification
-When backend API changes:
-1. Get updated `openapi.yaml` from backend team
-2. Place in project root (replacing existing)
-3. Run `yarn generate:api` to regenerate clients
-4. Check `src/api/generated/` for new types/endpoints
-5. Update service implementations if needed
+This is now fully automated:
+1. Backend team updates `openapi.yaml` (or sends the updated spec file)
+2. Replace existing `./openapi.yaml` in project root
+3. Run `yarn generate:api` - this auto-generates everything
+4. All API client functions and types are ready to use immediately
+5. No manual updates to service files needed if spec schema structure doesn't change
 
 ### Service Registration
+Register services in `src/setup/serviceRegistration.ts`:
+
 ```typescript
-// In src/setup/serviceRegistration.ts
+// Simple service registration (no dependencies)
 container.register(
-  SERVICE_TOKENS.AUTH_SERVICE,
-  () => {
-    const authService = new AuthServiceImpl();
-    const apiClient = container.resolve(SERVICE_TOKENS.API_CLIENT);
-
-    // Inject dependencies and resolve circular references
-    authService.setApiClient(apiClient);
-    apiClient.setAuthService(authService);
-
-    return authService;
-  },
+  SERVICE_TOKENS.CATEGORY_SERVICE,
+  () => new CategoryService(),
   true // singleton
 );
+
+// Service with Orval-generated client
+container.register(
+  SERVICE_TOKENS.LOCATION_SERVICE,
+  () => new LocationService(),
+  true // singleton - Orval client is used internally
+);
+
+// Services are registered ONCE with a flag to prevent double registration
+if (!isServiceRegistered) {
+  registerServices();  // Safe to call multiple times
+  isServiceRegistered = true;
+}
 ```
+
+**Key Patterns**:
+- All services are **singletons** (third parameter `true`)
+- Services use **Orval-generated clients internally** (no need to pass API client)
+- Duplicate registration prevented via `isServiceRegistered` flag
+- Circular dependencies resolved via direct imports (not DI)
 
 ### Custom Hook Pattern
 ```typescript
@@ -415,10 +505,14 @@ The `scripts/kill-servers.sh` script provides:
 
 ## Performance Considerations
 
-- Dynamic Naver Maps API loading
-- Zustand state persistence with selective serialization
-- Service singleton patterns in DI container
-- Infinite loop prevention in store updates
+- **Dynamic Naver Maps API loading**: Loaded on-demand via `NaverMapLoader`, not at app startup
+- **Zustand state persistence**: Auth store uses browser storage with selective serialization (only essential auth data)
+- **Service singleton patterns**: DI container ensures single instance per service (no duplicate API calls)
+- **Infinite loop prevention**: Zustand stores use state equality checks (`isEqual`) to avoid redundant updates
+- **API response handling**:
+  - Graceful fallback to mock data prevents app crashes on API failures
+  - Pagination handled efficiently via `.data.content` destructuring
+  - No unnecessary refetches due to condition checks in service implementations
 
 ## Build System & Scripts
 
@@ -447,3 +541,103 @@ The `scripts/kill-servers.sh` script provides:
 4. **Server Cleanup**: Use `yarn kill:servers` to reset development environment
 5. **Docker Testing**: Use `yarn docker:dev` to test containerized development
 6. **Production Testing**: Use `./deploy.sh prod` to test full deployment
+
+## Common Development Scenarios
+
+### Scenario: Adding a new API endpoint
+
+1. Backend team updates `openapi.yaml` with new endpoint
+2. You receive the updated spec file
+3. Replace `./openapi.yaml` in project root
+4. Run `yarn generate:api`
+5. Check `src/api/generated/` for new generated functions
+6. Use the generated function in your service:
+   ```typescript
+   import { newEndpointFunction } from 'src/api/generated/resource/resource';
+
+   export async function callNewEndpoint(params) {
+     const response = await newEndpointFunction(params);
+     return response.data;
+   }
+   ```
+
+### Scenario: Fixing an API pagination issue
+
+Common issue: `forEach is not a function` when iterating over API response
+
+```typescript
+// ❌ Wrong - assumes response.data is array
+const locations = response.data.forEach(...);  // Error!
+
+// ✅ Correct - extract content array first
+const data = response.data as unknown as { content?: LocationResponse[]; page?: unknown };
+const locations = data.content || [];  // Now safe to iterate
+```
+
+### Scenario: Debugging store updates not reflecting in UI
+
+Check `src/stores/location/locationStore.ts`:
+```typescript
+// Stores use state equality checks to prevent infinite loops
+set((state) => ({
+  ...state,
+  locations: updatedLocations
+  // Only updates if deep equality check passes
+}));
+```
+
+If UI doesn't update after store change:
+1. Verify the store is being called (check console logs)
+2. Check if state actually changed (compare old vs new values)
+3. Use React DevTools to inspect store state
+4. Ensure component is subscribed to store with `useShallow` hook if needed
+
+### Scenario: Orval regeneration broke imports
+
+If after running `yarn generate:api` imports break:
+1. Delete `src/api/generated/` directory
+2. Run `yarn generate:api` again
+3. Check file structure matches expected paths in `orval.config.ts`
+4. Update service imports if file locations changed
+
+## Important Patterns to Remember
+
+### 1. State Synchronization with Backend
+**Never trust frontend state alone**—always query backend after mutations:
+```typescript
+// ❌ Don't do this:
+addLocationToGroup(id, groupId);  // Just mutate state
+
+// ✅ Do this:
+addLocationToGroup(id, groupId);
+await updateGroupLocationIds(groupId);  // Sync with backend
+```
+
+### 2. Error Handling
+All services should gracefully degrade:
+```typescript
+try {
+  const response = await apiFunction();
+  return response.data;
+} catch (error) {
+  logger.error('Operation failed', error);
+  return MOCK_DATA;  // Fallback
+}
+```
+
+### 3. Service Registration is Idempotent
+You can call `registerServices()` multiple times safely:
+```typescript
+// These are all safe - prevented by isServiceRegistered flag
+registerServices();
+registerServices();
+registerServices();
+
+// Only the first one actually registers, others are skipped
+```
+
+### 4. HttpOnly Cookies
+- Cookies are automatically attached to all API requests
+- You don't need to manually add auth headers
+- Backend handles token refresh via `Set-Cookie` headers
+- Frontend doesn't need token refresh logic
