@@ -19,7 +19,8 @@ export const LocationList: React.FC = () => {
     return locations.filter(location => location.category === currentCategory);
   }, [locations, currentCategory]);
 
-  if (loading) {
+  // 이미 장소가 있으면 로딩 중에도 기존 장소 표시 (깜빡임 방지)
+  if (loading && filteredLocations.length === 0) {
     return (
       <Container>
         <LoadingState>
@@ -30,7 +31,7 @@ export const LocationList: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error && filteredLocations.length === 0) {
     return (
       <Container>
         <ErrorState>

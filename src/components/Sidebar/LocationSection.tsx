@@ -2,6 +2,7 @@
 
 import React from 'react';
 import styled from 'styled-components';
+import { useLocationStore } from '../../stores/location';
 import { useLocationFilters, useFilteredLocations } from '../../stores/location';
 import { useCategories } from '../../stores/category';
 import { colors } from '../../styles';
@@ -9,7 +10,12 @@ import { LocationList } from './LocationList';
 
 export const LocationSection: React.FC = () => {
   const { currentCategory } = useLocationFilters();
-  const locations = useFilteredLocations();
+  // 검색 쿼리 확인
+  const searchQuery = useLocationStore((state) => state.searchQuery);
+  // 스토어의 원본 locations 사용
+  const locations = useLocationStore((state) => state.locations);
+  // 검색이 활성화되었으면 필터링된 결과 사용, 아니면 원본 사용
+  const displayLocations = useFilteredLocations();
   const categories = useCategories();
 
   const getCurrentCategoryDisplay = () => {
@@ -20,7 +26,7 @@ export const LocationSection: React.FC = () => {
     return category?.displayName || currentCategory;
   };
 
-  // 장소가 없으면 섹션 렌더링하지 않음
+  // 스토어의 원본 locations가 없으면 섹션 렌더링하지 않음
   if (!locations || locations.length === 0) {
     return null;
   }
