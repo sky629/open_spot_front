@@ -132,15 +132,15 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
         (infoWindow as any).open(map, marker);
         console.log('✅ InfoWindow.open() called successfully');
 
-        // 정보창이 열린 후 이벤트 리스너 설정
-        setTimeout(() => {
+        // 정보창이 열린 후 이벤트 리스너 설정 (requestAnimationFrame으로 즉시 처리)
+        requestAnimationFrame(() => {
           const isOpen = (infoWindow as any).getMap();
           console.log('InfoWindow is now open?', !!isOpen);
 
           if (isOpen) {
             setupInfoWindowEvents();
           }
-        }, 100);
+        });
       } catch (error) {
         console.error('❌ Failed to open InfoWindow:', error);
       }
@@ -150,7 +150,7 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
 
     // 정보창 버튼 이벤트 (동적으로 추가됨)
     const setupInfoWindowEvents = () => {
-      const closeButton = document.querySelector(`[data-location-id="${location.id}"] .close-btn`);
+      const closeButton = document.querySelector(`[data-location-id="${location.id}"] .close-btn`) as HTMLElement;
 
       console.log('Setting up info window events for location:', location.id);
       console.log('Close button found:', !!closeButton);
@@ -162,9 +162,16 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
       });
 
       if (closeButton) {
-        closeButton.addEventListener('click', (e) => {
+        // 기존 이벤트 리스너 제거 (중복 방지)
+        const newCloseButton = closeButton.cloneNode(true) as HTMLElement;
+        closeButton.parentNode?.replaceChild(newCloseButton, closeButton);
+
+        // 새 이벤트 리스너 등록 (capture 단계에서 먼저 처리)
+        newCloseButton.addEventListener('click', (e: Event) => {
           e.preventDefault();
           e.stopPropagation();
+          (e as any).stopImmediatePropagation?.(); // 다른 리스너도 차단
+
           console.log('Close button clicked');
           (infoWindow as any).close();
 
@@ -173,7 +180,10 @@ export const LocationMarker: React.FC<LocationMarkerProps> = React.memo(({
           setSelectedLocation(null);
           setOpenInfoWindow(null);
           console.log('✅ Selected location cleared');
-        }, { once: false }); // Allow multiple clicks
+        }, {
+          capture: true,  // 캡처 단계에서 먼저 처리
+          once: true      // 중복 호출 방지
+        });
       }
     };
 
@@ -332,7 +342,7 @@ const createInfoWindowContent = (location: LocationResponse, categoryDisplayName
           </h3>
           ${ratingInTitle}
         </div>
-        <button class="close-btn" style="background: none; border: none; font-size: 24px; color: #a0aec0; cursor: pointer; padding: 0 0 0 8px; line-height: 1; flex-shrink: 0;">
+        <button class="close-btn" style="background: none; border: none; font-size: 24px; color: #a0aec0; cursor: pointer; padding: 8px 8px 8px 8px; line-height: 1; flex-shrink: 0; z-index: 10000; touch-action: none; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
           ×
         </button>
       </div>

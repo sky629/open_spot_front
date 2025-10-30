@@ -475,37 +475,41 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
   // 모바일 롱프레스 핸들러 - Ref 사용으로 클로저 문제 해결
   const touchStartTimeRef = useRef<number>(0);
   const touchStartPosRef = useRef<{x: number, y: number} | null>(null);
+  const isTouchMovingRef = useRef<boolean>(false);
+  const touchStartLatLngRef = useRef<{lat: number, lng: number} | null>(null);
 
   const handleTouchStart = useCallback((e: any) => {
     try {
       if (!e || !e.coord) return;
 
-      // 네이버 지도 기본 동작 방지
-      if (e.domEvent) {
-        e.domEvent.preventDefault();
-        e.domEvent.stopPropagation();
-      }
-
       touchStartTimeRef.current = Date.now();
+      isTouchMovingRef.current = false; // 터치 시작 시 이동 플래그 초기화
 
       // Naver Maps 좌표 객체에서 픽셀 좌표 추출
       if (typeof e.coord.x === 'function' && typeof e.coord.y === 'function') {
         touchStartPosRef.current = { x: e.coord.x(), y: e.coord.y() };
+      }
+
+      // 지도 좌표 저장 (모달에서 사용)
+      if (typeof e.coord.lat === 'function' && typeof e.coord.lng === 'function') {
+        touchStartLatLngRef.current = {
+          lat: e.coord.lat(),
+          lng: e.coord.lng()
+        };
       }
     } catch (error) {
       logger.error('Touch start error:', error);
     }
   }, []);
 
+  const handleTouchMove = useCallback(() => {
+    // 터치 이동 감지 (드래그와 롱프레스 구분)
+    isTouchMovingRef.current = true;
+  }, []);
+
   const handleTouchEnd = useCallback((e: any) => {
     try {
       if (!e || !e.coord) return;
-
-      // 네이버 지도 기본 동작 방지 (파란 핀 생성 차단)
-      if (e.domEvent) {
-        e.domEvent.preventDefault();
-        e.domEvent.stopPropagation();
-      }
 
       const touchDuration = Date.now() - touchStartTimeRef.current;
       const LONG_PRESS_DURATION = 500; // 500ms 이상 누르기
@@ -513,52 +517,32 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
       logger.info('Touch end detected', {
         duration: touchDuration,
         hasStartPos: !!touchStartPosRef.current,
+        hasLatLng: !!touchStartLatLngRef.current,
+        isMoving: isTouchMovingRef.current,
         coord: e.coord
       });
 
-      if (touchDuration >= LONG_PRESS_DURATION && touchStartPosRef.current) {
-        // 현재 좌표 가져오기
-        let currentX = 0;
-        let currentY = 0;
+      // 이동이 없고 500ms 이상 누른 경우만 롱프레스 인식
+      if (!isTouchMovingRef.current &&
+          touchDuration >= LONG_PRESS_DURATION &&
+          touchStartLatLngRef.current) {
 
-        if (typeof e.coord.x === 'function' && typeof e.coord.y === 'function') {
-          currentX = e.coord.x();
-          currentY = e.coord.y();
-        }
+        try {
+          const { lat, lng } = touchStartLatLngRef.current;
 
-        const startPos = touchStartPosRef.current;
-        const deltaX = Math.abs(currentX - startPos.x);
-        const deltaY = Math.abs(currentY - startPos.y);
-
-        logger.info('Long-press check', { deltaX, deltaY, threshold: 20 });
-
-        // 이동이 20px 미만이면 롱프레스로 인식 (오차 범위 확대)
-        if (deltaX < 20 && deltaY < 20) {
-          try {
-            const lat = e.coord.lat();
-            const lng = e.coord.lng();
-
-            if (typeof lat === 'function' && typeof lng === 'function') {
-              const latVal = lat();
-              const lngVal = lng();
-
-              logger.info('Map long-pressed (mobile)', { lat: latVal, lng: lngVal, duration: touchDuration });
-              setClickedPosition({ lat: latVal, lng: lngVal });
-              setIsModalOpen(true);
-            } else if (typeof lat === 'number' && typeof lng === 'number') {
-              logger.info('Map long-pressed (mobile)', { lat, lng, duration: touchDuration });
-              setClickedPosition({ lat, lng });
-              setIsModalOpen(true);
-            }
-          } catch (error) {
-            logger.error('Error getting lat/lng:', error);
-          }
+          logger.info('Map long-pressed (mobile)', { lat, lng, duration: touchDuration });
+          setClickedPosition({ lat, lng });
+          setIsModalOpen(true);
+        } catch (error) {
+          logger.error('Error opening modal:', error);
         }
       }
 
       // 초기화
       touchStartTimeRef.current = 0;
       touchStartPosRef.current = null;
+      touchStartLatLngRef.current = null;
+      isTouchMovingRef.current = false;
     } catch (error) {
       logger.error('Touch end error:', error);
     }
@@ -593,13 +577,15 @@ export const MapContainer = forwardRef<MapContainerRef, MapContainerProps>(({
     if (!map || !isLoaded) return;
 
     const touchStartListener = window.naver.maps.Event.addListener(map, 'touchstart', handleTouchStart);
+    const touchMoveListener = window.naver.maps.Event.addListener(map, 'touchmove', handleTouchMove);
     const touchEndListener = window.naver.maps.Event.addListener(map, 'touchend', handleTouchEnd);
 
     return () => {
       window.naver.maps.Event.removeListener(touchStartListener);
+      window.naver.maps.Event.removeListener(touchMoveListener);
       window.naver.maps.Event.removeListener(touchEndListener);
     };
-  }, [map, isLoaded, handleTouchStart, handleTouchEnd]);
+  }, [map, isLoaded, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
 
 
