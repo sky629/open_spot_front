@@ -306,7 +306,7 @@ export const useLocationStore = create<LocationState>()(
           } else {
             // 전체 새로고침
             await fetchLocations({
-              category: currentCategory || undefined,
+              categoryId: currentCategory || undefined,
               groupId: currentGroupId || undefined
             });
           }

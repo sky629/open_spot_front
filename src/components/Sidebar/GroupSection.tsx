@@ -1,6 +1,6 @@
 // Group Section Component
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { useFilteredGroups, useGroupUIState, useGroupStore } from '../../stores/group';
 import { useLocationStore } from '../../stores/location';
@@ -8,14 +8,113 @@ import { colors, transitions } from '../../styles';
 import { CreateGroupForm } from './CreateGroupForm';
 import { EditGroupModal } from './EditGroupModal';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { Group } from '../../types/group';
+import { logger } from '../../utils/logger';
+
+// Sortable Group Item Component
+interface SortableGroupItemProps {
+  group: Group;
+  isSelected: boolean;
+  onGroupClick: (groupId: string) => void;
+  showMenu: boolean;
+  onMenuToggle: (groupId: string) => void;
+  onEdit: (groupId: string) => void;
+  onDelete: (groupId: string) => void;
+}
+
+const SortableGroupItem: React.FC<SortableGroupItemProps> = ({
+  group,
+  isSelected,
+  onGroupClick,
+  showMenu,
+  onMenuToggle,
+  onEdit,
+  onDelete,
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: group.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <GroupItem
+      ref={setNodeRef}
+      style={style}
+      $selected={isSelected}
+      $isDragging={isDragging}
+      onClick={() => onGroupClick(group.id)}
+      {...attributes}
+      {...listeners}
+    >
+      <GroupInfo>
+        <GroupColorDot $color={group.color} />
+        <GroupName>{group.name}</GroupName>
+        <LocationCount>({group.locationIds?.length ?? 0})</LocationCount>
+      </GroupInfo>
+
+      <GroupMenu
+        onClick={(e) => {
+          e.stopPropagation();
+          onMenuToggle(group.id);
+        }}
+      >
+        <MenuIcon>⋮</MenuIcon>
+      </GroupMenu>
+
+      {showMenu && (
+        <DropdownMenu>
+          <MenuItem onClick={() => onEdit(group.id)}>
+            수정
+          </MenuItem>
+          <MenuItem onClick={() => onDelete(group.id)} $danger>
+            삭제
+          </MenuItem>
+        </DropdownMenu>
+      )}
+    </GroupItem>
+  );
+};
 
 export const GroupSection: React.FC = () => {
   const groups = useFilteredGroups();
   const ui = useGroupUIState();
-  const { setUIState, selectedGroupId, selectGroup } = useGroupStore();
+  const { setUIState, selectedGroupId, selectGroup, reorderGroups } = useGroupStore();
   const { setCurrentGroupId, refreshLocations } = useLocationStore();
   const searchQuery = useGroupStore((state) => state.searchQuery);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [orderedGroups, setOrderedGroups] = useState<Group[]>(groups);
+
+  // 그룹이 변경되면 정렬된 그룹 목록 업데이트
+  useEffect(() => {
+    setOrderedGroups(groups);
+  }, [groups]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -29,22 +128,60 @@ export const GroupSection: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [setUIState]);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   const handleAddGroup = () => {
     setUIState({ isCreating: true });
   };
 
   const handleGroupClick = (groupId: string) => {
     if (selectedGroupId === groupId) {
-      // 토글: 선택 해제 → 전체 조회
       selectGroup(null);
       setCurrentGroupId(null);
     } else {
-      // 새 그룹 선택 → 그룹 필터링
       selectGroup(groupId);
       setCurrentGroupId(groupId);
     }
-    // 지도 재조회
     refreshLocations();
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedGroups.findIndex((g) => g.id === active.id);
+      const newIndex = orderedGroups.findIndex((g) => g.id === over.id);
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        // UI 업데이트 (낙관적 업데이트)
+        const newOrder = arrayMove(orderedGroups, oldIndex, newIndex);
+        setOrderedGroups(newOrder);
+
+        // 백엔드에 순서 변경 요청
+        const groupOrders = newOrder.map((group, index) => ({
+          groupId: group.id,
+          order: index,
+        }));
+
+        try {
+          logger.info('Reordering groups', { groupOrders });
+          await reorderGroups(groupOrders);
+        } catch (error) {
+          logger.error('Failed to reorder groups', error);
+          // 에러 시 원래 순서로 복원
+          setOrderedGroups(groups);
+        }
+      }
+    }
   };
 
   return (
@@ -56,66 +193,59 @@ export const GroupSection: React.FC = () => {
         </AddButton>
       </Header>
 
-      <GroupList>
-        {groups.map((group) => (
-          <GroupItem
-            key={group.id}
-            $selected={selectedGroupId === group.id}
-            onClick={() => handleGroupClick(group.id)}
-          >
-            <GroupInfo>
-              <GroupColorDot $color={group.color} />
-              <GroupName>{group.name}</GroupName>
-              <LocationCount>({group.locationIds?.length ?? 0})</LocationCount>
-            </GroupInfo>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={orderedGroups.map((g) => g.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <GroupList>
+            {orderedGroups.map((group) => (
+              <SortableGroupItem
+                key={group.id}
+                group={group}
+                isSelected={selectedGroupId === group.id}
+                onGroupClick={handleGroupClick}
+                showMenu={ui.showMenuForGroupId === group.id}
+                onMenuToggle={(groupId) =>
+                  setUIState({ showMenuForGroupId: groupId })
+                }
+                onEdit={(groupId) =>
+                  setUIState({
+                    editingGroupId: groupId,
+                    showMenuForGroupId: null,
+                  })
+                }
+                onDelete={(groupId) =>
+                  setUIState({
+                    showDeleteConfirm: groupId,
+                    showMenuForGroupId: null,
+                  })
+                }
+              />
+            ))}
 
-            <GroupMenu
-              onClick={(e) => {
-                e.stopPropagation(); // 부모 클릭 이벤트 방지
-                setUIState({ showMenuForGroupId: group.id });
-              }}
-            >
-              <MenuIcon>⋮</MenuIcon>
-            </GroupMenu>
-
-            {ui.showMenuForGroupId === group.id && (
-              <DropdownMenu>
-                <MenuItem
-                  onClick={() => {
-                    setUIState({ editingGroupId: group.id, showMenuForGroupId: null });
-                  }}
-                >
-                  수정
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    setUIState({ showDeleteConfirm: group.id, showMenuForGroupId: null });
-                  }}
-                  $danger
-                >
-                  삭제
-                </MenuItem>
-              </DropdownMenu>
+            {orderedGroups.length === 0 && (
+              <EmptyState>
+                {searchQuery ? (
+                  <>
+                    <EmptyText>검색 결과가 없습니다</EmptyText>
+                    <EmptySubText>'{searchQuery}'에 해당하는 그룹이 없습니다</EmptySubText>
+                  </>
+                ) : (
+                  <>
+                    <EmptyText>생성된 그룹이 없습니다</EmptyText>
+                    <EmptySubText>+ 버튼을 눌러 새 그룹을 만들어보세요</EmptySubText>
+                  </>
+                )}
+              </EmptyState>
             )}
-          </GroupItem>
-        ))}
-
-        {groups.length === 0 && (
-          <EmptyState>
-            {searchQuery ? (
-              <>
-                <EmptyText>검색 결과가 없습니다</EmptyText>
-                <EmptySubText>'{searchQuery}'에 해당하는 그룹이 없습니다</EmptySubText>
-              </>
-            ) : (
-              <>
-                <EmptyText>생성된 그룹이 없습니다</EmptyText>
-                <EmptySubText>+ 버튼을 눌러 새 그룹을 만들어보세요</EmptySubText>
-              </>
-            )}
-          </EmptyState>
-        )}
-      </GroupList>
+          </GroupList>
+        </SortableContext>
+      </DndContext>
 
       {ui.isCreating && <CreateGroupForm />}
       {ui.editingGroupId && <EditGroupModal />}
@@ -178,20 +308,33 @@ const GroupList = styled.div`
   gap: 0.25rem;
 `;
 
-const GroupItem = styled.div<{ $selected?: boolean }>`
+const GroupItem = styled.div<{ $selected?: boolean; $isDragging?: boolean }>`
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
   border-radius: 6px;
-  cursor: pointer;
+  cursor: grab;
   transition: ${transitions.fast};
   background-color: ${props => props.$selected ? colors.primary.subtle : 'transparent'};
   border: 2px solid ${props => props.$selected ? colors.primary.main : 'transparent'};
+  user-select: none;
+
+  ${props => props.$isDragging && `
+    opacity: 0.5;
+    box-shadow: ${colors.shadow.lg};
+    background-color: ${colors.surface.hover};
+    border-color: ${colors.primary.main};
+    cursor: grabbing;
+  `}
 
   &:hover {
     background-color: ${props => props.$selected ? colors.primary.subtle : colors.surface.hover};
+  }
+
+  &:active {
+    cursor: grabbing;
   }
 `;
 

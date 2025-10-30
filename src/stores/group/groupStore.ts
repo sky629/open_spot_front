@@ -39,6 +39,9 @@ interface GroupStore {
   deleteGroup: (id: string) => Promise<void>;
   selectGroup: (id: string | null) => void;
 
+  // Group ordering
+  reorderGroups: (groupOrders: Array<{ groupId: string; order: number }>) => Promise<void>;
+
   // Location management (backend sync)
   updateGroupLocationIds: (groupId: string) => Promise<void>;
 
@@ -209,6 +212,33 @@ export const useGroupStore = create<GroupStore>()(
         selectGroup: (id: string | null) => {
           set({ selectedGroupId: id });
           logger.userAction('Group selected', { groupId: id });
+        },
+
+        // Reorder groups
+        reorderGroups: async (groupOrders: Array<{ groupId: string; order: number }>) => {
+          if (!groupService) {
+            logger.error('Group service not initialized');
+            return;
+          }
+
+          try {
+            set({ isLoading: true, error: null });
+            logger.info('Reordering groups', { orderCount: groupOrders.length });
+
+            await groupService.reorderGroups(groupOrders);
+
+            // Refetch groups to get updated order from backend
+            const groups = await groupService.getGroups();
+
+            set({ groups, isLoading: false });
+
+            logger.userAction('Groups reordered', { orderCount: groupOrders.length });
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to reorder groups';
+            set({ error: errorMessage, isLoading: false });
+            logger.error('Failed to reorder groups', error);
+            throw error;
+          }
         },
 
         // Location management (backend sync)

@@ -20,12 +20,17 @@ export const LocationSection: React.FC = () => {
     return category?.displayName || currentCategory;
   };
 
+  // 장소가 없으면 섹션 렌더링하지 않음
+  if (!locations || locations.length === 0) {
+    return null;
+  }
+
   return (
     <Container>
       <Header>
         <TitleWithCount>
           <Title>내 장소들</Title>
-          <Count>({locations?.length || 0})</Count>
+          <Count>({locations.length})</Count>
         </TitleWithCount>
         <CategoryLabel>
           {getCurrentCategoryDisplay()}

@@ -107,11 +107,11 @@ export class LocationService implements ILocationService {
       // 백엔드 연결 실패시 mock 데이터 사용
       let filteredLocations = MOCK_LOCATIONS;
 
-      if (params?.category && params.category !== 'all') {
+      if (params?.categoryId && params.categoryId !== 'all') {
         filteredLocations = MOCK_LOCATIONS.filter(location =>
-          location.category === params.category
+          location.category === params.categoryId
         );
-        logger.debug(`Filtered by category '${params.category}': ${filteredLocations.length} locations`);
+        logger.debug(`Filtered by categoryId '${params.categoryId}': ${filteredLocations.length} locations`);
       }
 
       return filteredLocations;
@@ -191,16 +191,22 @@ export class LocationService implements ILocationService {
 
   /**
    * 지도 범위 내 위치 정보 조회
+   *
+   * 백엔드가 기대하는 flat 파라미터 형식:
+   * northEastLat, northEastLon, southWestLat, southWestLon
    */
   async getLocationsByBounds(
     northEast: { lat: number; lng: number },
     southWest: { lat: number; lng: number },
-    category?: string,
+    categoryId?: string,
     groupId?: string
   ): Promise<LocationResponse[]> {
     return this.getLocations({
-      bounds: { northEast, southWest },
-      category,
+      northEastLat: northEast.lat,
+      northEastLon: northEast.lng,
+      southWestLat: southWest.lat,
+      southWestLon: southWest.lng,
+      categoryId,
       groupId,
     });
   }

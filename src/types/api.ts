@@ -9,7 +9,7 @@ import type {
 } from '../api/generated/model';
 
 // Orval 타입 그대로 re-export
-export type { UserResponse, CategoryResponse } from '../api/generated/model';
+export type { UserResponse, CategoryResponse, GetLocationsParams } from '../api/generated/model';
 
 // SortBy enum re-export
 export type LocationSortBy = SortByParamParameter;
@@ -52,20 +52,6 @@ export interface UpdateLocationRequest extends Partial<CreateLocationRequest> {
   id: string;
 }
 
-export interface GetLocationsParams {
-  category?: string;
-  categoryId?: string;
-  groupId?: string;
-  bounds?: {
-    northEast: { lat: number; lng: number };
-    southWest: { lat: number; lng: number };
-  };
-  limit?: number;
-  offset?: number;
-  page?: number;
-  size?: number;
-  sortBy?: LocationSortBy;
-}
 
 // 프론트엔드 전용 타입 - Orval이 생성하지 않는 타입들
 export interface User {
