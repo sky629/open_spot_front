@@ -126,17 +126,23 @@ export const useSearchLocations = (searchTerm: string) =>
 /**
  * 필터링된 위치 목록 (store의 searchQuery 사용)
  */
-export const useFilteredLocations = () =>
-  useLocationStore((state) => {
-    const query = state.searchQuery.trim().toLowerCase();
-    if (!query) return state.locations;
+export const useFilteredLocations = () => {
+  const locations = useLocationStore((state) => state.locations);
+  const searchQuery = useLocationStore((state) => state.searchQuery);
 
-    return state.locations.filter(location =>
+  return React.useMemo(() => {
+    if (!locations) return [];
+
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return locations;
+
+    return locations.filter(location =>
       location.name?.toLowerCase().includes(query) ||
       location.description?.toLowerCase().includes(query) ||
       location.address?.toLowerCase().includes(query)
     );
-  });
+  }, [locations, searchQuery]);
+};
 
 /**
  * 지도 관련 상태 셀렉터
