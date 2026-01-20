@@ -2,6 +2,8 @@
 
 React TypeScript 기반의 위치 정보 공유 플랫폼 프론트엔드입니다. 네이버 지도 API를 활용하여 카테고리별 장소 정보를 표시하고, Google OAuth 인증을 통한 사용자 관리 기능을 제공합니다.
 
+**엔드포인트**: https://openspot.kang-labs.com/
+
 ## 🚀 주요 기능
 
 - **🔐 Google OAuth 인증**: 간편한 구글 계정 로그인 (HttpOnly Cookie + Bearer Token)
